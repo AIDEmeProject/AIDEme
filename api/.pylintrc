@@ -1,0 +1,16 @@
+[MASTER]
+disable=
+  line-too-long,
+  missing-function-docstring,
+  missing-class-docstring,
+  missing-module-docstring,
+  broad-except,
+  too-few-public-methods,
+  bad-continuation,
+  wrong-import-order
+
+[BASIC]
+good-names=
+    i,
+    e,
+    logger,
