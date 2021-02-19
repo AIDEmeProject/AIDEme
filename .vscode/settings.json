@@ -1,9 +1,21 @@
 {
-    "editor.tabSize": 2,
+    "editor.formatOnSave": true,
     "[javascript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true
+      "editor.tabSize": 2,
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
+    "[python]": {
+      "editor.tabSize": 4,
+    },
+    "python.pythonPath": "api/venv/bin/python",
+    "python.linting.enabled": true,
+    "python.linting.lintOnSave": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.pylintPath": "api/venv/bin/pylint",
+    "python.linting.pylintArgs": ["--rcfile", "api/.pylintrc"],
+    "python.formatting.provider": "black",
+    "python.formatting.blackPath": "api/venv/bin/black",
+    "python.formatting.blackArgs": ["--line-length=80"],
     "files.exclude": {
       "**/.git": true,
       "**/.DS_Store": true,
