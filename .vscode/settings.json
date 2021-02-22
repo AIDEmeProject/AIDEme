@@ -15,7 +15,6 @@
     "python.linting.pylintArgs": ["--rcfile", "api/.pylintrc"],
     "python.formatting.provider": "black",
     "python.formatting.blackPath": "api/venv/bin/black",
-    "python.formatting.blackArgs": ["--line-length=80"],
     "files.exclude": {
       "**/.git": true,
       "**/.DS_Store": true,

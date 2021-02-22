@@ -23,10 +23,18 @@ sourve venv/bin/activate
 pip install -r requirements.txt
 ```
 
-- Add new packages in requirements.txt and install them
+- Install new packages
 
 ```
-pip install -r requirements.txt
+pip install new-package
+```
+
+Update `install_requires` or `extras_require`in `setup.py`
+
+Update `requirements.txt`
+
+```
+pip freezze > requirements.txt
 ```
 
 ### Run web server in development
@@ -43,3 +51,13 @@ export FLASK_ENV=development
 ```
 flask run
 ```
+
+# <<<<<<< HEAD
+
+Run with custom host and port
+
+```
+flask run -h localhost -p 3000
+```
+
+> > > > > > > create new session
