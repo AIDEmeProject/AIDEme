@@ -36,9 +36,10 @@ def summarize_dataset(filepath, separator):
     dataset = pd.read_csv(filepath, sep=separator)
     return {
         "columns": dataset.columns.to_list(),
-        "maximums": dataset.max(axis=0).to_list(),
-        "minimums": dataset.min(axis=0).to_list(),
+        "maximums": [0 for i in range(len(dataset.columns))],
+        # "maximums": dataset.max(axis=0).to_list(),
+        # "minimums": dataset.min(axis=0).to_list(),
         "uniqueValueNumbers": dataset.apply(lambda x: len(x.unique())).to_list(),
         "hasFloats": dataset.apply(lambda x: x.dtype == np.float64).to_list(),
-        "nRows": len(dataset),
+        # "nRows": len(dataset),
     }
