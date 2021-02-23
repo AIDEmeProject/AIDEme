@@ -52,12 +52,31 @@ export FLASK_ENV=development
 flask run
 ```
 
-# <<<<<<< HEAD
-
 Run with custom host and port
 
 ```
 flask run -h localhost -p 3000
 ```
 
-> > > > > > > create new session
+### Run tests
+
+- Install the package in editable mode
+
+```
+cd api
+pip install -e .
+```
+
+- Run all tests
+
+```
+cd api
+pytest
+```
+
+- Run a specific test
+
+```
+cd api
+pytest path/to/test_module.py
+```

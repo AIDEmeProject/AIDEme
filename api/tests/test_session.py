@@ -12,9 +12,9 @@ def test_session(client):
     )
     assert json.loads(response.data) == {
         "columns": ["id", "age", "sex", "indice_glycemique"],
-        "maximums": [15.0, 66.0, 1.0, 1.0],
+        "maximums": [4.0, 33.0, 1.0, 1.0],
         "minimums": [0.0, 8.0, 0.0, 0.5],
-        "uniqueValueNumbers": [16, 10, 2, 4],
+        "uniqueValueNumbers": [5, 5, 2, 3],
         "hasFloats": [False, False, False, True],
-        "nRows": 16,
+        "nRows": 5,
     }
