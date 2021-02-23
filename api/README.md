@@ -19,6 +19,20 @@ sourve venv/bin/activate
 
 - Install packages in the activated virtual environment
 
+Install aidme
+
+```
+pip install git+ssh://git@gitlab.inria.fr/ldipalma/aideme.git
+```
+
+or
+
+```
+pip install https://gitlab.inria.fr/ldipalma/aideme/-/archive/master/aideme-master.tar.gz
+```
+
+Install other dependencies
+
 ```
 pip install -r requirements.txt
 ```
@@ -55,7 +69,7 @@ flask run
 Run with custom host and port
 
 ```
-flask run -h localhost -p 3000
+flask run -h localhost -p 7060
 ```
 
 ### Run tests
