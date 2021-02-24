@@ -12,6 +12,7 @@ def create_app():
 
     CORS(app)
 
+    app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
     app.config[UPLOAD_FOLDER] = "./session"
     app.config[MAX_CONTENT_LENGTH] = 90 * 1024 * 1024
 

@@ -1,9 +1,10 @@
 import os
-from flask import Blueprint, request, current_app
+from flask import Blueprint, session, request, current_app
+import uuid
 import numpy as np
 import pandas as pd
+
 from .config_ids import UPLOAD_FOLDER
-from .config import SESSION_ID
 from .endpoints import SESSION
 
 bp = Blueprint("session", __name__, url_prefix=SESSION)
@@ -11,14 +12,18 @@ bp = Blueprint("session", __name__, url_prefix=SESSION)
 
 @bp.route("", methods=["POST"])
 def create_session():
+    session_id = uuid.uuid4()
+    session["session_id"] = session_id
+
     dataset = request.files["dataset"]
     separator = request.form["separator"]
 
     upload_path = os.path.join(
-        current_app.config[UPLOAD_FOLDER], SESSION_ID, "data.csv"
+        current_app.config[UPLOAD_FOLDER], str(session_id), "data.csv"
     )
 
     save_dataset(dataset, upload_path)
+    session["separator"] = separator
 
     return summarize_dataset(upload_path, separator)
 
@@ -38,8 +43,6 @@ def summarize_dataset(filepath, separator):
         "columns": dataset.columns.to_list(),
         "maximums": [0 for i in range(len(dataset.columns))],
         # "maximums": dataset.max(axis=0).to_list(),
-        # "minimums": dataset.min(axis=0).to_list(),
         "uniqueValueNumbers": dataset.apply(lambda x: len(x.unique())).to_list(),
         "hasFloats": dataset.apply(lambda x: x.dtype == np.float64).to_list(),
-        # "nRows": len(dataset),
     }
