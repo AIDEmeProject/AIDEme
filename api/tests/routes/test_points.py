@@ -4,8 +4,6 @@ import json
 import src.routes.points
 from src.routes.endpoints import INITIAL_UNLABELED_POINTS
 
-from tests.utils import MockStorageManager
-
 
 simple_margin_configuration = {
     "activeLearner": {
@@ -48,8 +46,9 @@ TEST_DATASET_PATH = os.path.join(
 
 
 def test_get_initial_points_to_label(client, monkeypatch):
-    monkeypatch.setattr(src.routes.points, "storage_manager", MockStorageManager())
-    monkeypatch.setattr(src.routes.points, "session", {"session_id": "random"})
+    monkeypatch.setattr(
+        src.routes.points, "session", {"session_id": "random", "separator": ","}
+    )
     monkeypatch.setattr(
         src.routes.points,
         "get_dataset_path",

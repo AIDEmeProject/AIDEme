@@ -1,4 +1,5 @@
 import json
+import dill
 from flask import Blueprint, session, request, jsonify
 from flask_cors import cross_origin
 import pandas as pd
@@ -10,7 +11,6 @@ from aideme.active_learning import SimpleMargin, KernelVersionSpace
 from .endpoints import INITIAL_UNLABELED_POINTS
 from ..utils import get_dataset_path
 
-from ..db.access import save_field, load_field
 
 bp = Blueprint("initial points", __name__, url_prefix=INITIAL_UNLABELED_POINTS)
 
@@ -22,8 +22,7 @@ def get_initial_points_to_label():
     column_ids = json.loads(request.form["columnIds"])
 
     full_dataset = pd.read_csv(
-        get_dataset_path(session["session_id"]),
-        load_field(session["session_id"], "separator"),
+        get_dataset_path(session["session_id"]), session["separator"]
     )
 
     dataset = full_dataset.iloc[:, column_ids].to_numpy()
@@ -61,11 +60,7 @@ def get_initial_points_to_label():
         initial_sampler=random_sampler(sample_size=3),
     )
 
-    save_field(
-        session["session_id"],
-        "exploration_manager",
-        exploration_manager,
-    )
+    session["exploration_manager"] = dill.dumps(exploration_manager)
 
     rows = []
     next_points_to_label = exploration_manager.get_next_to_label()

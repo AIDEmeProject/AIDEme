@@ -9,8 +9,6 @@ import pandas as pd
 from .endpoints import DATASETS
 from ..utils import get_dataset_path
 
-from ..db.access import save_field
-
 bp = Blueprint("datasets", __name__, url_prefix=DATASETS)
 
 
@@ -26,27 +24,28 @@ def create_session():
     dataset = request.files["dataset"]
     separator = request.form["separator"]
 
-    upload_path = get_dataset_path(session_id)
+    save_dataset(session_id, dataset, separator)
 
-    save_dataset(dataset, upload_path)
-    save_field(session_id, "separator", separator)
-
-    return summarize_dataset(upload_path, separator)
+    return summarize_dataset(get_dataset_path(session_id), separator)
 
 
-def delete_dataset(filepath):
+def delete_dataset(session_id):
+    filepath = get_dataset_path(session_id)
     dirpath = os.path.dirname(filepath)
     if os.path.isdir(dirpath):
         shutil.rmtree(dirpath)
 
 
-def save_dataset(file, filepath):
+def save_dataset(session_id, dataset, separator):
+    filepath = get_dataset_path(session_id)
     dirpath = os.path.dirname(filepath)
     if not os.path.isdir(dirpath):
         os.mkdir(dirpath)
 
-    file.save(filepath)
+    dataset.save(filepath)
     # TODO catch error on save
+
+    session["separator"] = separator
 
 
 def summarize_dataset(filepath, separator):
