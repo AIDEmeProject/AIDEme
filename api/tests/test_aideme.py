@@ -59,9 +59,8 @@ def run_and_assert_exploration_manager(dataset, active_learner, initial_sampler)
         assert isinstance(next_points_to_label, np.ndarray)
         assert next_points_to_label.shape == (3,)
         assert next_points_to_label.dtype == np.dtype("int64")
-        assert (
-            next_points_to_label.min() >= 0
-            and next_points_to_label.max() < dataset.__len__()
+        assert next_points_to_label.min() >= 0 and next_points_to_label.max() < len(
+            dataset
         )
         assert len(set(labeled_points)) == len(labeled_points)
 

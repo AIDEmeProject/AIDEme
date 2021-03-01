@@ -27,12 +27,11 @@ def get_initial_points_to_label():
     if db_client.exists(session_id) == 0:
         return {"errorMessage": "Session expired"}
 
-    full_dataset = pd.read_csv(
+    dataset = pd.read_csv(
         get_dataset_path(session_id),
         db_client.hget(session_id, "separator").decode("utf-8"),
-    )
-
-    dataset = full_dataset.iloc[:, column_ids].to_numpy()
+        usecols=column_ids,
+    ).to_numpy()
     # TODO: normalize, categorical columns, null values
 
     if configuration["activeLearner"]["name"] == "SimpleMargin":
@@ -69,9 +68,11 @@ def get_initial_points_to_label():
 
     db_client.hset(session_id, "exploration_manager", dill.dumps(exploration_manager))
 
-    rows = []
     next_points_to_label = exploration_manager.get_next_to_label()
-    for idx in next_points_to_label:
-        rows.append({"id": int(idx), "data": {"array": dataset[idx, :].tolist()}})
 
-    return jsonify(rows)
+    return jsonify(
+        [
+            {"id": int(idx), "data": {"array": dataset[idx, :].tolist()}}
+            for idx in next_points_to_label
+        ]
+    )
