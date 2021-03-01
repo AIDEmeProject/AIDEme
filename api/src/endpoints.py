@@ -1,1 +1,0 @@
-SESSION = "/new-session"

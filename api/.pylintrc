@@ -7,7 +7,7 @@ disable=
   broad-except,
   too-few-public-methods,
   bad-continuation,
-  wrong-import-order
+  relative-beyond-top-level
 
 [BASIC]
 good-names=
