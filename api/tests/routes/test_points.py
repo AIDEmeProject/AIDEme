@@ -45,15 +45,9 @@ TEST_DATASET_PATH = os.path.join(
 )
 
 
-def test_get_initial_points_to_label(client, monkeypatch):
-    monkeypatch.setattr(
-        src.routes.points, "session", {"session_id": "random", "separator": ","}
-    )
-    monkeypatch.setattr(
-        src.routes.points,
-        "get_dataset_path",
-        lambda x: TEST_DATASET_PATH,
-    )
+def test_get_initial_points_to_label_session_expired(client, monkeypatch):
+    monkeypatch.setattr(src.routes.points, "session", {"session_id": "random"})
+    monkeypatch.setattr(src.routes.points.db_client, "exists", lambda session_id: 0)
 
     response = client.post(
         INITIAL_UNLABELED_POINTS,
@@ -62,10 +56,40 @@ def test_get_initial_points_to_label(client, monkeypatch):
             "columnIds": json.dumps([1, 3]),
         },
     )
-    points_to_label = json.loads(response.data)
 
-    assert isinstance(points_to_label, list)
-    assert len(points_to_label) == 3
-    assert {"id", "data"} <= points_to_label[0].keys()
-    assert "array" in points_to_label[0]["data"]
-    assert len(points_to_label[0]["data"]["array"]) == 2
+    assert json.loads(response.data) == {"errorMessage": "Session expired"}
+
+
+def test_get_initial_points_to_label_session_valid(client, monkeypatch):
+    def use_algo(configuration):
+        response = client.post(
+            INITIAL_UNLABELED_POINTS,
+            data={
+                "configuration": json.dumps(configuration),
+                "columnIds": json.dumps([1, 3]),
+            },
+        )
+        points_to_label = json.loads(response.data)
+
+        assert isinstance(points_to_label, list)
+        assert len(points_to_label) == 3
+        assert {"id", "data"} <= points_to_label[0].keys()
+        assert "array" in points_to_label[0]["data"]
+        assert len(points_to_label[0]["data"]["array"]) == 2
+
+    monkeypatch.setattr(src.routes.points, "session", {"session_id": "random"})
+    monkeypatch.setattr(src.routes.points.db_client, "exists", lambda session_id: 1)
+    monkeypatch.setattr(
+        src.routes.points.db_client, "hget", lambda session_id, field: b","
+    )
+    monkeypatch.setattr(
+        src.routes.points.db_client, "hset", lambda session_id, field, value: None
+    )
+    monkeypatch.setattr(
+        src.routes.points,
+        "get_dataset_path",
+        lambda x: TEST_DATASET_PATH,
+    )
+
+    use_algo(simple_margin_configuration)
+    use_algo(version_space_configuration)

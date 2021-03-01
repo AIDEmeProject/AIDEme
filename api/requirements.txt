@@ -1,10 +1,12 @@
 aideme==1.0.dev0
--e git+git@gitlab.inria.fr:lenguyen/aideme-web.git@564274a58401d1d61f018b4ed72d700195475737#egg=aideme_web_api&subdirectory=api
+-e git+git@gitlab.inria.fr:lenguyen/aideme-web.git@1f7a119397f4b9d5a30fca42f40279d711e43252#egg=aideme_web_api&subdirectory=api
 appdirs==1.4.4
 astroid==2.4.2
 attrs==20.3.0
 black==20.8b1
 click==7.1.2
+Cython==0.29.22
+dill==0.3.3
 Flask==1.1.2
 Flask-Cors==3.0.10
 importlib-metadata==3.4.0
@@ -16,18 +18,23 @@ joblib==1.0.1
 lazy-object-proxy==1.4.3
 MarkupSafe==1.1.1
 mccabe==0.6.1
+multiprocess==0.70.11.1
 mypy-extensions==0.4.3
 numpy==1.20.1
 packaging==20.9
 pandas==1.2.2
 pathspec==0.8.1
 pluggy==0.13.1
+pox==0.2.9
+ppft==1.6.6.3
 py==1.10.0
 pylint==2.6.2
 pyparsing==2.4.7
+pystan==2.19.1.1
 pytest==6.2.2
 python-dateutil==2.8.1
 pytz==2021.1
+redis==3.5.3
 regex==2020.11.13
 scikit-learn==0.24.1
 scipy==1.6.1

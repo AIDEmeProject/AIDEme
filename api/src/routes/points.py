@@ -1,14 +1,16 @@
 import json
 import dill
+import pandas as pd
+
 from flask import Blueprint, session, request, jsonify
 from flask_cors import cross_origin
-import pandas as pd
 
 from aideme.initial_sampling import random_sampler
 from aideme.explore import PartitionedDataset, ExplorationManager
 from aideme.active_learning import SimpleMargin, KernelVersionSpace
 
 from .endpoints import INITIAL_UNLABELED_POINTS
+from ..db import db_client
 from ..utils import get_dataset_path
 
 
@@ -20,9 +22,14 @@ bp = Blueprint("initial points", __name__, url_prefix=INITIAL_UNLABELED_POINTS)
 def get_initial_points_to_label():
     configuration = json.loads(request.form["configuration"])
     column_ids = json.loads(request.form["columnIds"])
+    session_id = session["session_id"]
+
+    if db_client.exists(session_id) == 0:
+        return {"errorMessage": "Session expired"}
 
     full_dataset = pd.read_csv(
-        get_dataset_path(session["session_id"]), session["separator"]
+        get_dataset_path(session_id),
+        db_client.hget(session_id, "separator").decode("utf-8"),
     )
 
     dataset = full_dataset.iloc[:, column_ids].to_numpy()
@@ -60,7 +67,7 @@ def get_initial_points_to_label():
         initial_sampler=random_sampler(sample_size=3),
     )
 
-    session["exploration_manager"] = dill.dumps(exploration_manager)
+    db_client.hset(session_id, "exploration_manager", dill.dumps(exploration_manager))
 
     rows = []
     next_points_to_label = exploration_manager.get_next_to_label()
