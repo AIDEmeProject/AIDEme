@@ -30,22 +30,21 @@ def test_exploration_manager():
     ]
 
     for learner in active_learners:
-        full_dataset = pd.read_csv(
-            TEST_DATASET_PATH,
-            sep=",",
-        )
-        dataset = PartitionedDataset(
-            full_dataset.iloc[:, [1, 3]].to_numpy(), copy=False
-        )
+        dataset = pd.read_csv(TEST_DATASET_PATH, sep=",", usecols=[1, 3]).to_numpy()
 
-        initial_sampler = random_sampler(sample_size=3)
-
-        run_and_assert_exploration_manager(dataset, learner, initial_sampler)
+        run_and_assert_exploration_manager(
+            dataset,
+            learner,
+            initial_sampler=random_sampler(sample_size=3),
+        )
 
 
 def run_and_assert_exploration_manager(dataset, active_learner, initial_sampler):
     exploration_manager = ExplorationManager(
-        dataset, active_learner, subsampling=50000, initial_sampler=initial_sampler
+        PartitionedDataset(dataset),
+        active_learner,
+        subsampling=50000,
+        initial_sampler=initial_sampler,
     )
 
     labeled_points = []
@@ -69,3 +68,9 @@ def run_and_assert_exploration_manager(dataset, active_learner, initial_sampler)
     next_points_to_label = exploration_manager.get_next_to_label()
 
     assert next_points_to_label.shape == (1,)
+
+    original_idx = next_points_to_label[0]
+    current_idx = exploration_manager.data.index.tolist().index(original_idx)
+    row = exploration_manager.data.data[current_idx]
+
+    assert row.tolist() == dataset[original_idx].tolist()

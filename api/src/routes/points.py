@@ -6,26 +6,45 @@ from flask import Blueprint, session, request, jsonify
 from flask_cors import cross_origin
 
 from aideme.initial_sampling import random_sampler
-from aideme.explore import PartitionedDataset, ExplorationManager
+from aideme.explore import LabeledSet, PartitionedDataset, ExplorationManager
 from aideme.active_learning import SimpleMargin, KernelVersionSpace
 
-from .endpoints import INITIAL_UNLABELED_POINTS
+from .endpoints import INITIAL_UNLABELED_POINTS, NEXT_UNLABELED_POINTS
 from ..db import db_client
 from ..utils import get_dataset_path
 
 
-bp = Blueprint("initial points", __name__, url_prefix=INITIAL_UNLABELED_POINTS)
+bp = Blueprint("points to label", __name__)
+
+SESSION_EXPIRED_MESSAGE = {"errorMessage": "Session expired"}
 
 
-@bp.route("", methods=["POST"])
+def format_points_to_label(points, partitioned_dataset):
+    rows = []
+    for original_idx in points:
+        current_idx = partitioned_dataset.index.tolist().index(original_idx)
+        rows.append(
+            {
+                "id": int(original_idx),
+                "data": {"array": partitioned_dataset.data[current_idx].tolist()},
+            }
+        )
+    return rows
+
+
+@bp.route(INITIAL_UNLABELED_POINTS, methods=["POST"])
 @cross_origin(supports_credentials=True)
 def get_initial_points_to_label():
-    configuration = json.loads(request.form["configuration"])
-    column_ids = json.loads(request.form["columnIds"])
+    if "session_id" not in session:
+        return SESSION_EXPIRED_MESSAGE
+
     session_id = session["session_id"]
 
     if db_client.exists(session_id) == 0:
-        return {"errorMessage": "Session expired"}
+        return SESSION_EXPIRED_MESSAGE
+
+    configuration = json.loads(request.form["configuration"])
+    column_ids = json.loads(request.form["columnIds"])
 
     dataset = pd.read_csv(
         get_dataset_path(session_id),
@@ -60,7 +79,7 @@ def get_initial_points_to_label():
         )
 
     exploration_manager = ExplorationManager(
-        PartitionedDataset(dataset),
+        PartitionedDataset(dataset, copy=False),
         active_learner,
         subsampling=configuration["subsampleSize"],
         initial_sampler=random_sampler(sample_size=3),
@@ -69,10 +88,35 @@ def get_initial_points_to_label():
     db_client.hset(session_id, "exploration_manager", dill.dumps(exploration_manager))
 
     next_points_to_label = exploration_manager.get_next_to_label()
-
     return jsonify(
-        [
-            {"id": int(idx), "data": {"array": dataset[idx, :].tolist()}}
-            for idx in next_points_to_label
-        ]
+        format_points_to_label(next_points_to_label, exploration_manager.data)
+    )
+
+
+@bp.route(NEXT_UNLABELED_POINTS, methods=["POST"])
+@cross_origin(supports_credentials=True)
+def get_next_points_to_label():
+    if "session_id" not in session:
+        return SESSION_EXPIRED_MESSAGE
+
+    session_id = session["session_id"]
+
+    if db_client.exists(session_id) == 0:
+        return SESSION_EXPIRED_MESSAGE
+
+    labeled_points = json.loads(request.form["labeledPoints"])
+    exploration_manager = dill.loads(db_client.hget(session_id, "exploration_manager"))
+
+    exploration_manager.update(
+        LabeledSet(
+            [point["label"] for point in labeled_points],
+            index=[point["id"] for point in labeled_points],
+        )
+    )
+
+    db_client.hset(session_id, "exploration_manager", dill.dumps(exploration_manager))
+
+    next_points_to_label = exploration_manager.get_next_to_label()
+    return jsonify(
+        format_points_to_label(next_points_to_label, exploration_manager.data)
     )
