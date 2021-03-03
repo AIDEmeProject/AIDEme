@@ -19,17 +19,14 @@ bp = Blueprint("points to label", __name__)
 SESSION_EXPIRED_MESSAGE = {"errorMessage": "Session expired"}
 
 
-def format_points_to_label(points, partitioned_dataset):
-    rows = []
-    for original_idx in points:
-        current_idx = partitioned_dataset.index.tolist().index(original_idx)
-        rows.append(
-            {
-                "id": int(original_idx),
-                "data": {"array": partitioned_dataset.data[current_idx].tolist()},
-            }
-        )
-    return rows
+def format_points_to_label(points):
+    return [
+        {
+            "id": int(original_idx),
+            "data": {"array": points.data[current_idx].tolist()},
+        }
+        for current_idx, original_idx in enumerate(points.index)
+    ]
 
 
 @bp.route(INITIAL_UNLABELED_POINTS, methods=["POST"])
@@ -88,9 +85,7 @@ def get_initial_points_to_label():
     db_client.hset(session_id, "exploration_manager", dill.dumps(exploration_manager))
 
     next_points_to_label = exploration_manager.get_next_to_label()
-    return jsonify(
-        format_points_to_label(next_points_to_label, exploration_manager.data)
-    )
+    return jsonify(format_points_to_label(next_points_to_label))
 
 
 @bp.route(NEXT_UNLABELED_POINTS, methods=["POST"])
@@ -117,6 +112,4 @@ def get_next_points_to_label():
     db_client.hset(session_id, "exploration_manager", dill.dumps(exploration_manager))
 
     next_points_to_label = exploration_manager.get_next_to_label()
-    return jsonify(
-        format_points_to_label(next_points_to_label, exploration_manager.data)
-    )
+    return jsonify(format_points_to_label(next_points_to_label))

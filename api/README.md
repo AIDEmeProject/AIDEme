@@ -19,7 +19,7 @@ sourve venv/bin/activate
 
 - Install packages in the activated virtual environment
 
-Install aidme
+Install aideme
 
 ```
 pip install git+ssh://git@gitlab.inria.fr/ldipalma/aideme.git
@@ -51,6 +51,13 @@ Update `requirements.txt`
 pip freezze > requirements.txt
 ```
 
+- Update aideme
+
+```
+pip uninstall aideme
+pip install git+ssh://git@gitlab.inria.fr/ldipalma/aideme.git
+```
+
 ### Run web server in development
 
 - Set environment variables once
@@ -66,7 +73,7 @@ export FLASK_ENV=development
 flask run
 ```
 
-Run with custom host and port
+Run with custom host and port (to match with the existing frontend)
 
 ```
 flask run -h localhost -p 7060
