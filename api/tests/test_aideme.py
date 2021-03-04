@@ -79,3 +79,14 @@ def run_and_assert_exploration_manager(dataset, active_learner, initial_sampler)
     assert np.all(
         next_points_to_label.data[0] == dataset[next_points_to_label.index[0]]
     )
+
+    assert set(np.hstack((
+        exploration_manager.data.labeled_set.index,
+        exploration_manager.data.unlabeled.index
+        ))) == set(exploration_manager.data.index)
+
+    predictions = exploration_manager.active_learner.predict(
+        exploration_manager.data.unlabeled.data
+    )
+    assert isinstance(predictions, np.ndarray)
+    assert len(predictions) == len(exploration_manager.data.unlabeled.data)
