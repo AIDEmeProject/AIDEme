@@ -84,6 +84,7 @@ def run_and_assert_exploration_manager(dataset, active_learner, initial_sampler)
         exploration_manager.data.labeled_set.index,
         exploration_manager.data.unlabeled.index
         ))) == set(exploration_manager.data.index)
+    assert np.all(exploration_manager.data.labeled.index == exploration_manager.data.labeled_set.index)
 
     predictions = exploration_manager.active_learner.predict(
         exploration_manager.data.unlabeled.data
