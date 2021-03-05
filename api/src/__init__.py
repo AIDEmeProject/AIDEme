@@ -5,7 +5,7 @@ from flask_cors import CORS
 
 from .config.general import UPLOAD_FOLDER
 from .config import app_specific
-from .routes import datasets, points
+from .routes import datasets, points, predictions
 
 
 def create_app():
@@ -18,5 +18,6 @@ def create_app():
 
     app.register_blueprint(datasets.bp)
     app.register_blueprint(points.bp)
+    app.register_blueprint(predictions.bp)
 
     return app

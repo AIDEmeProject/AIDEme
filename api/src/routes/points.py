@@ -11,12 +11,10 @@ from aideme.active_learning import SimpleMargin, KernelVersionSpace
 
 from .endpoints import INITIAL_UNLABELED_POINTS, NEXT_UNLABELED_POINTS
 from ..db import db_client
-from ..utils import get_dataset_path
+from ..utils import get_dataset_path, is_session_expired, SESSION_EXPIRED_MESSAGE
 
 
 bp = Blueprint("points to label", __name__)
-
-SESSION_EXPIRED_MESSAGE = {"errorMessage": "Session expired"}
 
 
 def format_points_to_label(points):
@@ -32,13 +30,10 @@ def format_points_to_label(points):
 @bp.route(INITIAL_UNLABELED_POINTS, methods=["POST"])
 @cross_origin(supports_credentials=True)
 def get_initial_points_to_label():
-    if "session_id" not in session:
+    if is_session_expired(session):
         return SESSION_EXPIRED_MESSAGE
 
     session_id = session["session_id"]
-
-    if db_client.exists(session_id) == 0:
-        return SESSION_EXPIRED_MESSAGE
 
     configuration = json.loads(request.form["configuration"])
     column_ids = json.loads(request.form["columnIds"])
@@ -91,13 +86,10 @@ def get_initial_points_to_label():
 @bp.route(NEXT_UNLABELED_POINTS, methods=["POST"])
 @cross_origin(supports_credentials=True)
 def get_next_points_to_label():
-    if "session_id" not in session:
+    if is_session_expired(session):
         return SESSION_EXPIRED_MESSAGE
 
     session_id = session["session_id"]
-
-    if db_client.exists(session_id) == 0:
-        return SESSION_EXPIRED_MESSAGE
 
     labeled_points = json.loads(request.form["labeledPoints"])
     exploration_manager = dill.loads(db_client.hget(session_id, "exploration_manager"))
