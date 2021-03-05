@@ -25,31 +25,16 @@ def predict():
         db_client.hget(session["session_id"], "exploration_manager")
     )
 
-    predictions = exploration_manager.active_learner.predict(
-        exploration_manager.data.unlabeled.data
-    )
+    all_labels = exploration_manager.compute_user_labels_prediction()
 
-    new_indexes_data_labels = concat(
-        exploration_manager.data.unlabeled.index,
-        exploration_manager.data.unlabeled.data,
-        predictions,
-    )
-    old_indexes_data_labels = concat(
-        exploration_manager.data.labeled.index,
-        exploration_manager.data.labeled.data,
-        exploration_manager.data.labeled_set.labels,
-    )
-    all_indexes_data_labels = np.vstack(
-        (new_indexes_data_labels, old_indexes_data_labels)
-    )
-
-    response = []
-    for row in all_indexes_data_labels[all_indexes_data_labels[:, 0].argsort()]:
-        response.append(
-            {
-                "dataPoint": {"id": int(row[0]), "data": {"array": row[1:-1].tolist()}},
-                "label": "POSITIVE" if row[-1] == 1 else "NEGATIVE",
-            }
+    response = [
+        {
+            "dataPoint": {"id": int(idx), "data": {"array": row.tolist()}},
+            "label": "POSITIVE" if label > 0 else "NEGATIVE",
+        }
+        for (idx, row, label) in zip(
+            all_labels.index, exploration_manager.data.data, all_labels.labels
         )
-
+    ]
+    response.sort(key=lambda x: x["dataPoint"]["id"])
     return jsonify(response)

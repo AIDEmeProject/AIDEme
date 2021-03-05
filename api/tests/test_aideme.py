@@ -80,14 +80,21 @@ def run_and_assert_exploration_manager(dataset, active_learner, initial_sampler)
         next_points_to_label.data[0] == dataset[next_points_to_label.index[0]]
     )
 
-    assert set(np.hstack((
-        exploration_manager.data.labeled_set.index,
-        exploration_manager.data.unlabeled.index
-        ))) == set(exploration_manager.data.index)
-    assert np.all(exploration_manager.data.labeled.index == exploration_manager.data.labeled_set.index)
-
     predictions = exploration_manager.active_learner.predict(
         exploration_manager.data.unlabeled.data
     )
+    all_labels = exploration_manager.compute_user_labels_prediction()
     assert isinstance(predictions, np.ndarray)
-    assert len(predictions) == len(exploration_manager.data.unlabeled.data)
+    assert isinstance(all_labels, LabeledSet)
+    assert np.all(all_labels.index == exploration_manager.data.index)
+    assert np.all(
+        all_labels.index[: exploration_manager.data.labeled_size]
+        == exploration_manager.data.labeled_set.index
+    )
+    assert np.all(
+        all_labels.labels[: exploration_manager.data.labeled_size]
+        == exploration_manager.data.labeled_set.labels
+    )
+    assert np.all(
+        all_labels.labels[exploration_manager.data.labeled_size :] == predictions
+    )
