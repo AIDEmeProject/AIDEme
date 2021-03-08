@@ -1,4 +1,5 @@
 import os
+import dill
 import pandas as pd
 import numpy as np
 
@@ -50,9 +51,9 @@ def test_exploration_manager_with_factorization():
         )
 
         steps = [
-            {"labels": [0, 0, 0], "partition": [[0, 1], [1, 0], [0, 0]]},
-            {"labels": [0, 0, 1], "partition": [[1, 0], [1, 0], [1, 1]]},
-            {"labels": [0], "partition": [[0, 0]]},
+            {"labels": [0, 0, 0], "partitions": [[0, 1], [1, 0], [0, 0]]},
+            {"labels": [0, 0, 1], "partitions": [[1, 0], [1, 0], [1, 1]]},
+            {"labels": [0], "partitions": [[0, 0]]},
         ]
 
         run_and_assert_exploration_manager_with_factorization(
@@ -84,9 +85,14 @@ def run_and_assert_exploration_manager_with_factorization(
         exploration_manager.update(
             LabeledSet(
                 labels=step["labels"],
-                partial=step["partition"],
+                partial=step["partitions"],
                 index=next_points_to_label.index,
             )
         )
+
+        current_active_learner = exploration_manager.active_learner
+        exploration_manager.active_learner = None
+        assert dill.pickles(exploration_manager)
+        exploration_manager.active_learner = current_active_learner
 
     assert len(set(all_points_to_label)) == len(all_points_to_label)

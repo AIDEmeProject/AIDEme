@@ -1,16 +1,18 @@
 import os
 import json
-import dill
-import numpy as np
 import pandas as pd
 
 from aideme.explore import ExplorationManager, PartitionedDataset
 from aideme.explore.partitioned import IndexedDataset
 from aideme.active_learning import KernelVersionSpace
+from aideme.active_learning.dsm import FactorizedDualSpaceModel
 from aideme.initial_sampling import random_sampler
 
 import src.routes.points
-from src.routes.endpoints import INITIAL_UNLABELED_POINTS, NEXT_UNLABELED_POINTS
+from src.routes.endpoints import (
+    INITIAL_UNLABELED_POINTS,
+    NEXT_UNLABELED_POINTS,
+)
 from src.routes.points import compute_partition_in_new_indexes, format_points_to_label
 
 
@@ -218,42 +220,68 @@ def test_get_initial_points_to_label(client, monkeypatch):
 
 
 def test_get_next_points_to_label(client, monkeypatch):
-    dataset = pd.read_csv(TEST_DATASET_PATH, sep=SEPARATOR, usecols=SELECTED_COLS)
-    exploration_manager = ExplorationManager(
-        PartitionedDataset(dataset, copy=False),
-        KernelVersionSpace(),
-        subsampling=50000,
-        initial_sampler=random_sampler(sample_size=3),
-    )
-
     monkeypatch.setattr(src.routes.points, "session", {"session_id": "random"})
     monkeypatch.setattr(src.routes.points.db_client, "exists", lambda session_id: 1)
-    monkeypatch.setattr(
-        src.routes.points.db_client,
-        "hget",
-        lambda session_id, field: dill.dumps(exploration_manager),
-    )
     monkeypatch.setattr(
         src.routes.points.db_client, "hset", lambda session_id, field, value: None
     )
 
-    response = client.post(
-        NEXT_UNLABELED_POINTS,
-        data={
-            "labeledPoints": json.dumps(
-                [
-                    {"id": 3, "label": 1, "data": {"array": [8, 0.5]}},
-                    {"id": 9, "label": 1, "data": {"array": [43, 0.5]}},
-                    {"id": 11, "label": 0, "data": {"array": [28, 0.6]}},
-                ]
-            )
+    cases = [
+        {
+            "selected_columns": SELECTED_COLS,
+            "partition": None,
+            "labeled_points": [
+                {"id": 3, "label": 1, "data": {"array": [8, 0.5]}},
+                {"id": 9, "label": 1, "data": {"array": [43, 0.5]}},
+                {"id": 11, "label": 0, "data": {"array": [28, 0.6]}},
+            ],
         },
-    )
+        {
+            "selected_columns": [1, 2, 3],
+            "partition": [[0, 2], [1, 2]],
+            "labeled_points": [
+                {"id": 3, "labels": [1, 0], "data": {"array": [8, 0.5, 0, 0.5]}},
+                {"id": 9, "labels": [0, 1], "data": {"array": [43, 0.5, 1, 0.5]}},
+                {"id": 11, "labels": [1, 1], "data": {"array": [28, 0.6, 0, 0.6]}},
+            ],
+        },
+    ]
 
-    points_to_label = json.loads(response.data)
+    for case in cases:
+        is_tsm = case["partition"] is not None
 
-    assert isinstance(points_to_label, list)
-    assert len(points_to_label) == 1
-    assert {"id", "data"} <= points_to_label[0].keys()
-    assert "array" in points_to_label[0]["data"]
-    assert len(points_to_label[0]["data"]["array"]) == 2
+        dataset = pd.read_csv(
+            TEST_DATASET_PATH, sep=SEPARATOR, usecols=case["selected_columns"]
+        )
+        active_learner = (
+            FactorizedDualSpaceModel(KernelVersionSpace(), partition=case["partition"])
+            if is_tsm
+            else KernelVersionSpace()
+        )
+        exploration_manager = ExplorationManager(
+            PartitionedDataset(dataset, copy=False),
+            active_learner,
+            subsampling=50000,
+            initial_sampler=random_sampler(sample_size=3),
+        )
+
+        monkeypatch.setattr(
+            src.routes.points,
+            "load_exploration_manager",
+            lambda session_id, with_separate_active_learner: exploration_manager,
+        )
+
+        response = client.post(
+            NEXT_UNLABELED_POINTS,
+            data={"labeledPoints": json.dumps(case["labeled_points"])},
+        )
+
+        points_to_label = json.loads(response.data)
+
+        assert isinstance(points_to_label, list)
+        assert len(points_to_label) == 1
+        assert {"id", "data"} <= points_to_label[0].keys()
+        assert "array" in points_to_label[0]["data"]
+        assert len(points_to_label[0]["data"]["array"]) == len(
+            case["labeled_points"][0]["data"]["array"]
+        )
