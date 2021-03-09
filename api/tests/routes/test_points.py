@@ -62,7 +62,7 @@ FACTORIZED_SIMPLE_MARGIN_CONFIGURATION = {
         "searchUnknownRegionProbability": 0.5,
         "columns": ["age", "indice_glycemique", "sex"],
         "decompose": True,
-        "flags": [[True, True], [True, True]],
+        "flags": [[True, False], [True, True]],
         "featureGroups": [["age", "indice_glycemique"], ["sex"]],
     },
 }
@@ -74,7 +74,7 @@ FACTORIZED_VERSION_SPACE_CONFIGURATION = {
         "searchUnknownRegionProbability": 0.5,
         "columns": ["age", "indice_glycemique", "sex", "indice_glycemique"],
         "decompose": True,
-        "flags": [[True, True], [True, True]],
+        "flags": [[True, False], [True, False]],
         "featureGroups": [["age", "indice_glycemique"], ["sex", "indice_glycemique"]],
     },
 }
@@ -129,7 +129,7 @@ def test_format_points_to_label():
     cases = [
         {
             "args": {
-                "points": IndexedDataset(data=np.array([[33, 1]]), index=np.array([0])),
+                "points": IndexedDataset(data=[[33, 1]], index=[0]),
                 "partition": None,
             },
             "expected_output": [
@@ -141,7 +141,7 @@ def test_format_points_to_label():
         },
         {
             "args": {
-                "points": IndexedDataset(data=np.array([[33, 1]]), index=np.array([0])),
+                "points": IndexedDataset(data=[[33, 1]], index=[0]),
                 "partition": [[0, 1], [0]],
             },
             "expected_output": [

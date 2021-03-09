@@ -45,7 +45,7 @@ def test_exploration_manager_with_factorization():
         exploration_manager = ExplorationManager(
             PartitionedDataset(dataset),
             factorized_active_learner,
-            subsampling=50000,
+            subsampling=None,
             initial_sampler=random_sampler(sample_size=3),
         )
 
