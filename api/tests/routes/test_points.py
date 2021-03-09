@@ -1,14 +1,17 @@
 import os
 import json
 import dill
+import numpy as np
 import pandas as pd
 
 from aideme.explore import ExplorationManager, PartitionedDataset
+from aideme.explore.partitioned import IndexedDataset
 from aideme.active_learning import KernelVersionSpace
 from aideme.initial_sampling import random_sampler
 
 import src.routes.points
 from src.routes.endpoints import INITIAL_UNLABELED_POINTS, NEXT_UNLABELED_POINTS
+from src.routes.points import compute_partition_in_new_indexes, format_points_to_label
 
 
 TEST_DATASET_PATH = os.path.join(
@@ -52,6 +55,113 @@ VERSION_SPACE_CONFIGURATION = {
     "task": "sdss_Q4_0.1%",
 }
 
+FACTORIZED_SIMPLE_MARGIN_CONFIGURATION = {
+    **SIMPLE_MARGIN_CONFIGURATION,
+    "multiTSM": {
+        "hasTsm": True,
+        "searchUnknownRegionProbability": 0.5,
+        "columns": ["age", "indice_glycemique", "sex"],
+        "decompose": True,
+        "flags": [[True, False], [True, True]],
+        "featureGroups": [["age", "indice_glycemique"], ["sex"]],
+    },
+}
+
+FACTORIZED_VERSION_SPACE_CONFIGURATION = {
+    **VERSION_SPACE_CONFIGURATION,
+    "multiTSM": {
+        "hasTsm": True,
+        "searchUnknownRegionProbability": 0.5,
+        "columns": ["age", "indice_glycemique", "sex", "indice_glycemique"],
+        "decompose": True,
+        "flags": [[True, False], [True, False]],
+        "featureGroups": [["age", "indice_glycemique"], ["sex", "indice_glycemique"]],
+    },
+}
+
+
+def test_compute_partition_in_new_indexes():
+    cases = [
+        {
+            "args": {
+                "column_ids": [1, 3, 2],
+                "column_names": ["age", "indice_glycemique", "sex"],
+                "partition_in_names": [["age", "indice_glycemique"], ["sex"]],
+            },
+            "expected_output": {
+                "partition": [[0, 2], [1]],
+                "unique_column_ids": [1, 2, 3],
+            },
+        },
+        {
+            "args": {
+                "column_ids": [1, 3, 2, 3],
+                "column_names": [
+                    "age",
+                    "indice_glycemique",
+                    "sex",
+                    "indice_glycemique",
+                ],
+                "partition_in_names": [
+                    ["age", "indice_glycemique"],
+                    ["sex", "indice_glycemique"],
+                ],
+            },
+            "expected_output": {
+                "partition": [[0, 2], [1, 2]],
+                "unique_column_ids": [1, 2, 3],
+            },
+        },
+    ]
+
+    for case in cases:
+        assert compute_partition_in_new_indexes(
+            case["args"]["column_ids"],
+            case["args"]["column_names"],
+            case["args"]["partition_in_names"],
+        ) == (
+            case["expected_output"]["partition"],
+            case["expected_output"]["unique_column_ids"],
+        )
+
+
+def test_format_points_to_label():
+    cases = [
+        {
+            "args": {
+                "points": IndexedDataset(data=[[33, 1]], index=[0]),
+                "partition": None,
+            },
+            "expected_output": [
+                {
+                    "id": 0,
+                    "data": {"array": [33, 1]},
+                }
+            ],
+        },
+        {
+            "args": {
+                "points": IndexedDataset(data=[[33, 1]], index=[0]),
+                "partition": [[0, 1], [0]],
+            },
+            "expected_output": [
+                {
+                    "id": 0,
+                    "data": {"array": [33, 1, 33]},
+                }
+            ],
+        },
+    ]
+
+    for case in cases:
+        assert (
+            format_points_to_label(
+                case["args"]["points"],
+                case["args"]["partition"],
+            )
+            == case["expected_output"]
+        )
+
 
 def test_get_initial_points_to_label_session_expired(client, monkeypatch):
     monkeypatch.setattr(src.routes.points, "session", {"session_id": "random"})
@@ -68,13 +178,13 @@ def test_get_initial_points_to_label_session_expired(client, monkeypatch):
     assert json.loads(response.data) == {"errorMessage": "Session expired"}
 
 
-def test_get_initial_points_to_label_session_valid(client, monkeypatch):
-    def use_algo(configuration):
+def test_get_initial_points_to_label(client, monkeypatch):
+    def use_config(configuration, column_ids):
         response = client.post(
             INITIAL_UNLABELED_POINTS,
             data={
                 "configuration": json.dumps(configuration),
-                "columnIds": json.dumps(SELECTED_COLS),
+                "columnIds": json.dumps(column_ids),
             },
         )
         points_to_label = json.loads(response.data)
@@ -83,7 +193,7 @@ def test_get_initial_points_to_label_session_valid(client, monkeypatch):
         assert len(points_to_label) == 3
         assert {"id", "data"} <= points_to_label[0].keys()
         assert "array" in points_to_label[0]["data"]
-        assert len(points_to_label[0]["data"]["array"]) == 2
+        assert len(points_to_label[0]["data"]["array"]) == len(column_ids)
 
     monkeypatch.setattr(src.routes.points, "session", {"session_id": "random"})
     monkeypatch.setattr(src.routes.points.db_client, "exists", lambda session_id: 1)
@@ -101,8 +211,10 @@ def test_get_initial_points_to_label_session_valid(client, monkeypatch):
         lambda x: TEST_DATASET_PATH,
     )
 
-    use_algo(SIMPLE_MARGIN_CONFIGURATION)
-    use_algo(VERSION_SPACE_CONFIGURATION)
+    use_config(SIMPLE_MARGIN_CONFIGURATION, column_ids=SELECTED_COLS)
+    use_config(VERSION_SPACE_CONFIGURATION, column_ids=SELECTED_COLS)
+    use_config(FACTORIZED_SIMPLE_MARGIN_CONFIGURATION, column_ids=[1, 3, 2])
+    use_config(FACTORIZED_VERSION_SPACE_CONFIGURATION, column_ids=[1, 3, 2, 3])
 
 
 def test_get_next_points_to_label(client, monkeypatch):
