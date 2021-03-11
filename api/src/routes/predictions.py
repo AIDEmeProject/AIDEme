@@ -1,4 +1,3 @@
-import numpy as np
 import dill
 import csv
 
@@ -12,6 +11,7 @@ from ..utils import (
     get_labeled_dataset_path,
 )
 from ..db import db_client
+from ..db.utils import load_exploration_manager
 
 bp = Blueprint("predictions", __name__)
 
@@ -22,20 +22,20 @@ def predict():
     if is_session_expired(session):
         return SESSION_EXPIRED_MESSAGE
 
-    exploration_manager = dill.loads(
-        db_client.hget(session["session_id"], "exploration_manager")
+    session_id = session["session_id"]
+    is_tsm = db_client.hexists(session_id, "factorization")
+    exploration_manager = load_exploration_manager(
+        session_id, with_separate_active_learner=is_tsm
     )
 
     all_labels = exploration_manager.compute_user_labels_prediction()
 
     response = [
         {
-            "dataPoint": {"id": int(idx), "data": {"array": row.tolist()}},
+            "dataPoint": {"id": int(idx)},
             "label": "POSITIVE" if label > 0 else "NEGATIVE",
         }
-        for (idx, row, label) in zip(
-            all_labels.index, exploration_manager.data.data, all_labels.labels
-        )
+        for (idx, label) in zip(all_labels.index, all_labels.labels)
     ]
     response.sort(key=lambda x: x["dataPoint"]["id"])
     return jsonify(response)
