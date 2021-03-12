@@ -1,6 +1,6 @@
-import numpy as np
-import dill
 import csv
+
+import dill
 
 from flask import Blueprint, session, jsonify, send_file
 from flask_cors import cross_origin
@@ -30,12 +30,10 @@ def predict():
 
     response = [
         {
-            "dataPoint": {"id": int(idx), "data": {"array": row.tolist()}},
+            "dataPoint": {"id": int(idx)},
             "label": "POSITIVE" if label > 0 else "NEGATIVE",
         }
-        for (idx, row, label) in zip(
-            all_labels.index, exploration_manager.data.data, all_labels.labels
-        )
+        for (idx, label) in zip(all_labels.index, all_labels.labels)
     ]
     response.sort(key=lambda x: x["dataPoint"]["id"])
     return jsonify(response)

@@ -1,11 +1,13 @@
 import os
 import json
+
+import dill
 import pandas as pd
 
 from aideme.explore import ExplorationManager, PartitionedDataset
 from aideme.explore.partitioned import IndexedDataset
 from aideme.active_learning import KernelVersionSpace
-from aideme.active_learning.dsm import FactorizedDualSpaceModel
+from aideme.active_learning.version_space import SubspatialVersionSpace
 from aideme.initial_sampling import random_sampler
 
 import src.routes.points
@@ -254,7 +256,7 @@ def test_get_next_points_to_label(client, monkeypatch):
             TEST_DATASET_PATH, sep=SEPARATOR, usecols=case["selected_columns"]
         )
         active_learner = (
-            FactorizedDualSpaceModel(KernelVersionSpace(), partition=case["partition"])
+            SubspatialVersionSpace(partition=case["partition"])
             if is_tsm
             else KernelVersionSpace()
         )
@@ -266,9 +268,11 @@ def test_get_next_points_to_label(client, monkeypatch):
         )
 
         monkeypatch.setattr(
-            src.routes.points,
-            "load_exploration_manager",
-            lambda session_id, with_separate_active_learner: exploration_manager,
+            src.routes.points.db_client,
+            "hget",
+            lambda session_id, field: dill.dumps(exploration_manager)
+            if field == "exploration_manager"
+            else dill.dumps(case["partition"]),
         )
 
         response = client.post(
