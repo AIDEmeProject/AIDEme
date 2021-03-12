@@ -1,8 +1,8 @@
 import os
 import io
 import shutil
+
 import json
-import dill
 import pandas as pd
 
 from aideme.explore import ExplorationManager, PartitionedDataset, LabeledSet
@@ -13,7 +13,7 @@ from aideme.initial_sampling import random_sampler
 import src.routes.predictions
 from src.routes.endpoints import PREDICTIONS, LABELED_DATASET
 from src.config.general import UPLOAD_FOLDER
-from src.utils import get_session_path, get_dataset_path
+from src.utils import get_dataset_path
 
 TEST_DATASET_PATH = os.path.join(
     __file__.split(sep="tests")[0], "tests", "data", "numeric_medium.csv"
@@ -52,25 +52,15 @@ def create_exploration_manager(dataset, active_learner, labeled_points):
 
 
 def test_predict(client, monkeypatch):
-    monkeypatch.setattr(src.routes.predictions, "session", {"session_id": "random"})
-    monkeypatch.setattr(
-        src.routes.predictions.db_client, "exists", lambda session_id: 1
-    )
-
     for case in CASES:
         dataset = pd.read_csv(
             TEST_DATASET_PATH, sep=SEPARATOR, usecols=case["selected_columns"]
         )
 
         monkeypatch.setattr(
-            src.routes.predictions.db_client,
-            "hexists",
-            lambda session_id, field: case["is_tsm"],
-        )
-        monkeypatch.setattr(
-            src.routes.predictions,
-            "load_exploration_manager",
-            lambda session_id, with_separate_active_learner: create_exploration_manager(
+            src.routes.predictions.cache,
+            "get",
+            lambda key: create_exploration_manager(
                 dataset, case["active_learner"], case["labeled_points"]
             ),
         )
@@ -89,35 +79,23 @@ def test_predict(client, monkeypatch):
 
 
 def test_download_labeled_dataset(client, monkeypatch):
-    session_id = "random"
-
     if not os.path.isdir(UPLOAD_FOLDER):
         os.mkdir(UPLOAD_FOLDER)
 
-    session_path = get_session_path(session_id)
-    if not os.path.isdir(session_path):
-        os.mkdir(session_path)
-
-    shutil.copyfile(TEST_DATASET_PATH, get_dataset_path(session_id))
+    shutil.copyfile(TEST_DATASET_PATH, get_dataset_path())
 
     dataset = pd.read_csv(
         TEST_DATASET_PATH, sep=SEPARATOR, usecols=CASES[0]["selected_columns"]
     )
 
-    monkeypatch.setattr(src.routes.predictions, "session", {"session_id": session_id})
     monkeypatch.setattr(
-        src.routes.predictions.db_client, "exists", lambda session_id: 1
-    )
-    monkeypatch.setattr(
-        src.routes.predictions.db_client,
-        "hget",
-        lambda session_id, field: dill.dumps(
-            create_exploration_manager(
-                dataset, CASES[0]["active_learner"], CASES[0]["labeled_points"]
-            )
+        src.routes.predictions.cache,
+        "get",
+        lambda key: create_exploration_manager(
+            dataset, CASES[0]["active_learner"], CASES[0]["labeled_points"]
         )
-        if field == "exploration_manager"
-        else SEPARATOR.encode(),
+        if key == "exploration_manager"
+        else SEPARATOR,
     )
 
     response = client.get(LABELED_DATASET)
@@ -135,5 +113,3 @@ def test_download_labeled_dataset(client, monkeypatch):
     assert len(labeled_dataset) == len(dataset)
     assert len(labeled_dataset.columns) == len(dataset.columns) + 1
     assert labeled_dataset.iloc[:, 1].equals(dataset.iloc[:, 1])
-
-    shutil.rmtree(get_session_path(session_id))

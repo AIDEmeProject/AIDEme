@@ -165,21 +165,6 @@ def test_format_points_to_label():
         )
 
 
-def test_get_initial_points_to_label_session_expired(client, monkeypatch):
-    monkeypatch.setattr(src.routes.points, "session", {"session_id": "random"})
-    monkeypatch.setattr(src.routes.points.db_client, "exists", lambda session_id: 0)
-
-    response = client.post(
-        INITIAL_UNLABELED_POINTS,
-        data={
-            "configuration": json.dumps(SIMPLE_MARGIN_CONFIGURATION),
-            "columnIds": json.dumps(SELECTED_COLS),
-        },
-    )
-
-    assert json.loads(response.data) == {"errorMessage": "Session expired"}
-
-
 def test_get_initial_points_to_label(client, monkeypatch):
     def use_config(configuration, column_ids):
         response = client.post(
@@ -197,21 +182,12 @@ def test_get_initial_points_to_label(client, monkeypatch):
         assert "array" in points_to_label[0]["data"]
         assert len(points_to_label[0]["data"]["array"]) == len(column_ids)
 
-    monkeypatch.setattr(src.routes.points, "session", {"session_id": "random"})
-    monkeypatch.setattr(src.routes.points.db_client, "exists", lambda session_id: 1)
-    monkeypatch.setattr(
-        src.routes.points.db_client,
-        "hget",
-        lambda session_id, field: SEPARATOR.encode(),
-    )
-    monkeypatch.setattr(
-        src.routes.points.db_client, "hset", lambda session_id, field, value: None
-    )
     monkeypatch.setattr(
         src.routes.points,
         "get_dataset_path",
-        lambda x: TEST_DATASET_PATH,
+        lambda: TEST_DATASET_PATH,
     )
+    monkeypatch.setattr(src.routes.points.cache, "get", lambda key: ",")
 
     use_config(SIMPLE_MARGIN_CONFIGURATION, column_ids=SELECTED_COLS)
     use_config(VERSION_SPACE_CONFIGURATION, column_ids=SELECTED_COLS)
@@ -220,12 +196,6 @@ def test_get_initial_points_to_label(client, monkeypatch):
 
 
 def test_get_next_points_to_label(client, monkeypatch):
-    monkeypatch.setattr(src.routes.points, "session", {"session_id": "random"})
-    monkeypatch.setattr(src.routes.points.db_client, "exists", lambda session_id: 1)
-    monkeypatch.setattr(
-        src.routes.points.db_client, "hset", lambda session_id, field, value: None
-    )
-
     cases = [
         {
             "selected_columns": SELECTED_COLS,
@@ -266,9 +236,9 @@ def test_get_next_points_to_label(client, monkeypatch):
         )
 
         monkeypatch.setattr(
-            src.routes.points,
-            "load_exploration_manager",
-            lambda session_id, with_separate_active_learner: exploration_manager,
+            src.routes.points.cache,
+            "get",
+            lambda key: exploration_manager,
         )
 
         response = client.post(

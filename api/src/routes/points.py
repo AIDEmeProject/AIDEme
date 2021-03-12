@@ -2,7 +2,7 @@ import json
 import pandas as pd
 import numpy as np
 
-from flask import Blueprint, session, request, jsonify
+from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
 
 from aideme.initial_sampling import random_sampler
@@ -14,13 +14,8 @@ from .endpoints import (
     INITIAL_UNLABELED_POINTS,
     NEXT_UNLABELED_POINTS,
 )
-from ..db import db_client
-from ..db.utils import (
-    save_exploration_manager,
-    save_factorized_active_learner,
-    load_exploration_manager,
-)
-from ..utils import get_dataset_path, is_session_expired, SESSION_EXPIRED_MESSAGE
+from ..cache import cache
+from ..utils import get_dataset_path
 
 
 bp = Blueprint("points to label", __name__)
@@ -86,11 +81,6 @@ def format_points_to_label(points, partition=None):
 @bp.route(INITIAL_UNLABELED_POINTS, methods=["POST"])
 @cross_origin(supports_credentials=True)
 def get_initial_points_to_label():
-    if is_session_expired(session):
-        return SESSION_EXPIRED_MESSAGE
-
-    session_id = session["session_id"]
-
     configuration = json.loads(request.form["configuration"])
     column_ids = json.loads(request.form["columnIds"])
 
@@ -123,8 +113,8 @@ def get_initial_points_to_label():
         partition = None
 
     dataset = pd.read_csv(
-        get_dataset_path(session_id),
-        db_client.hget(session_id, "separator").decode("utf-8"),
+        get_dataset_path(),
+        cache.get("separator"),
         usecols=unique_column_ids,
     ).to_numpy()
     # TODO: normalize, categorical columns, null values
@@ -143,15 +133,7 @@ def get_initial_points_to_label():
         initial_sampler=random_sampler(sample_size=3),
     )
 
-    if is_tsm:
-        save_factorized_active_learner(
-            session_id, active_learner, sample_unknown_proba, partition, mode
-        )
-        save_exploration_manager(
-            session_id, exploration_manager, without_active_learner=True
-        )
-    else:
-        save_exploration_manager(session_id, exploration_manager)
+    cache.set("exploration_manager", exploration_manager)
 
     next_points_to_label = exploration_manager.get_next_to_label()
     return jsonify(format_points_to_label(next_points_to_label, partition))
@@ -160,18 +142,11 @@ def get_initial_points_to_label():
 @bp.route(NEXT_UNLABELED_POINTS, methods=["POST"])
 @cross_origin(supports_credentials=True)
 def get_next_points_to_label():
-    if is_session_expired(session):
-        return SESSION_EXPIRED_MESSAGE
-
-    session_id = session["session_id"]
-
     labeled_points = json.loads(request.form["labeledPoints"])
 
     is_tsm = "labels" in labeled_points[0]
 
-    exploration_manager = load_exploration_manager(
-        session_id, with_separate_active_learner=is_tsm
-    )
+    exploration_manager = cache.get("exploration_manager")
 
     if is_tsm:
         exploration_manager.update(
@@ -191,9 +166,7 @@ def get_next_points_to_label():
         )
         partition = None
 
-    save_exploration_manager(
-        session_id, exploration_manager, without_active_learner=is_tsm
-    )
+    cache.set("exploration_manager", exploration_manager)
 
     next_points_to_label = exploration_manager.get_next_to_label()
     return jsonify(
