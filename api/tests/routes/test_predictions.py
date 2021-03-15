@@ -11,7 +11,7 @@ from aideme.active_learning.dsm import FactorizedDualSpaceModel
 from aideme.initial_sampling import random_sampler
 
 import src.routes.predictions
-from src.routes.endpoints import PREDICTIONS, LABELED_DATASET
+from src.routes.endpoints import PREDICTIONS, POLYTOPE_PREDICTIONS, LABELED_DATASET
 from src.config.general import UPLOAD_FOLDER
 from src.utils import get_dataset_path
 
@@ -22,13 +22,11 @@ SEPARATOR = ","
 
 CASES = [
     {
-        "is_tsm": False,
         "selected_columns": [1, 3],
         "active_learner": KernelVersionSpace(),
         "labeled_points": LabeledSet(labels=[0, 0, 1], index=[1, 5, 8]),
     },
     {
-        "is_tsm": True,
         "selected_columns": [1, 2, 3],
         "active_learner": FactorizedDualSpaceModel(
             KernelVersionSpace(), partition=[[0, 2], [1, 2]]
@@ -65,17 +63,23 @@ def test_predict(client, monkeypatch):
             ),
         )
 
-        response = client.get(PREDICTIONS)
-        labeled_dataset = json.loads(response.data)
+        get_all_labels_and_assert(client, PREDICTIONS, dataset)
+        if isinstance(case["active_learner"], FactorizedDualSpaceModel):
+            get_all_labels_and_assert(client, POLYTOPE_PREDICTIONS, dataset)
 
-        assert isinstance(labeled_dataset, list)
-        assert len(labeled_dataset) == len(dataset)
-        num_positive = 0
-        for idx, row in enumerate(labeled_dataset):
-            assert row["dataPoint"]["id"] == idx
-            if row["label"] == "POSITIVE":
-                num_positive += 1
-        assert 1 <= num_positive < len(dataset)
+
+def get_all_labels_and_assert(client, endpoint, dataset):
+    response = client.get(endpoint)
+    all_labels = json.loads(response.data)
+
+    assert isinstance(all_labels, list)
+    assert len(all_labels) == len(dataset)
+    num_positive = 0
+    for idx, row in enumerate(all_labels):
+        assert row["dataPoint"]["id"] == idx
+        if row["label"] == "POSITIVE":
+            num_positive += 1
+    assert 1 <= num_positive < len(dataset)
 
 
 def test_download_labeled_dataset(client, monkeypatch):

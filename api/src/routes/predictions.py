@@ -3,7 +3,7 @@ import csv
 from flask import Blueprint, jsonify, send_file
 from flask_cors import cross_origin
 
-from .endpoints import PREDICTIONS, LABELED_DATASET
+from .endpoints import PREDICTIONS, POLYTOPE_PREDICTIONS, LABELED_DATASET
 from ..utils import (
     get_labeled_dataset_path,
 )
@@ -12,12 +12,15 @@ from ..cache import cache
 bp = Blueprint("predictions", __name__)
 
 
-@bp.route(PREDICTIONS, methods=["GET"])
-@cross_origin(supports_credentials=True)
-def predict():
+def predict(with_polytope=False):
     exploration_manager = cache.get("exploration_manager")
 
-    all_labels = exploration_manager.compute_user_labels_prediction()
+    if with_polytope:
+        all_labels = exploration_manager.data.predict_user_labels(
+            exploration_manager.active_learner.polytope_model
+        )
+    else:
+        all_labels = exploration_manager.compute_user_labels_prediction()
 
     response = [
         {
@@ -28,6 +31,18 @@ def predict():
     ]
     response.sort(key=lambda x: x["dataPoint"]["id"])
     return jsonify(response)
+
+
+@bp.route(PREDICTIONS, methods=["GET"])
+@cross_origin(supports_credentials=True)
+def learner_predict():
+    return predict()
+
+
+@bp.route(POLYTOPE_PREDICTIONS, methods=["GET"])
+@cross_origin(supports_credentials=True)
+def polytope_predict():
+    return predict(with_polytope=True)
 
 
 @bp.route(LABELED_DATASET, methods=["GET"])

@@ -90,16 +90,20 @@ def run_and_assert_exploration_manager_with_factorization(
             )
         )
 
-        current_active_learner = exploration_manager.active_learner
-        exploration_manager.active_learner = None
-        assert dill.pickles(exploration_manager)
-        exploration_manager.active_learner = current_active_learner
-
     assert len(set(all_points_to_label)) == len(all_points_to_label)
 
     all_labels = exploration_manager.compute_user_labels_prediction()
-    assert isinstance(all_labels.index, np.ndarray)
-    assert isinstance(all_labels.labels, np.ndarray)
-    assert len(all_labels.index) == len(dataset)
-    assert np.any(all_labels.labels == 1)
-    assert np.any(all_labels.labels == 0)
+    assert_predictions(all_labels, dataset)
+
+    all_polytope_labels = exploration_manager.data.predict_user_labels(
+        exploration_manager.active_learner.polytope_model
+    )
+    assert_predictions(all_polytope_labels, dataset)
+
+
+def assert_predictions(predictions, dataset):
+    assert isinstance(predictions.index, np.ndarray)
+    assert isinstance(predictions.labels, np.ndarray)
+    assert len(predictions.index) == len(dataset)
+    assert np.any(predictions.labels == 1)
+    assert np.any(predictions.labels == 0)
