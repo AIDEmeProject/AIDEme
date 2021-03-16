@@ -37,10 +37,13 @@ def save_dataset(dataset, separator):
 def summarize_dataset(filepath, separator):
     engine = None if separator in [",", ";"] else "python"
     dataset = pd.read_csv(filepath, sep=separator, engine=engine)
+
+    is_object = dataset.apply(lambda x: x.dtype == np.object)
+    is_int = dataset.apply(lambda x: x.dtype == np.int64)
+    num_unique_values = dataset.apply(lambda x: len(x.unique()))
+    is_categorical = is_object | (is_int & (num_unique_values < 0.2 * len(dataset)))
+
     return {
         "columns": dataset.columns.tolist(),
-        "maximums": [0] * len(dataset.columns),
-        # "maximums": dataset.max(axis=0).tolist(),
-        "uniqueValueNumbers": dataset.apply(lambda x: len(x.unique())).tolist(),
-        "hasFloats": dataset.apply(lambda x: x.dtype == np.float64).tolist(),
+        "types": ["categorical" if value else "numerical" for value in is_categorical],
     }

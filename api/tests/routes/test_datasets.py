@@ -6,7 +6,7 @@ from src.routes.endpoints import DATASETS
 from src.config.general import UPLOAD_FOLDER
 
 TEST_DATASET_PATH = os.path.join(
-    __file__.split(sep="tests")[0], "tests", "data", "numeric_small.csv"
+    __file__.split(sep="tests")[0], "tests", "data", "numeric_medium.csv"
 )
 
 
@@ -20,9 +20,7 @@ def test_create_session(client):
 
         assert json.loads(response.data) == {
             "columns": ["id", "age", "sex", "indice_glycemique"],
-            "maximums": [0, 0, 0, 0],
-            "uniqueValueNumbers": [5, 5, 2, 3],
-            "hasFloats": [False, False, False, True],
+            "types": ["numerical", "numerical", "categorical", "numerical"],
         }
         assert os.path.isdir(UPLOAD_FOLDER)
 
