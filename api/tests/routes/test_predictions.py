@@ -76,7 +76,7 @@ def get_all_labels_and_assert(client, endpoint, dataset):
     assert len(all_labels) == len(dataset)
     num_positive = 0
     for idx, row in enumerate(all_labels):
-        assert row["dataPoint"]["id"] == idx
+        assert row["id"] == idx
         if row["label"] == "POSITIVE":
             num_positive += 1
     assert 1 <= num_positive < len(dataset)
@@ -115,5 +115,4 @@ def test_download_labeled_dataset(client, monkeypatch):
         io.BytesIO(response.data), sep=SEPARATOR, header=None, index_col=0
     )
     assert len(labeled_dataset) == len(dataset)
-    assert len(labeled_dataset.columns) == len(dataset.columns) + 1
-    assert labeled_dataset.iloc[:, 1].equals(dataset.iloc[:, 1])
+    assert len(labeled_dataset.columns) == 1

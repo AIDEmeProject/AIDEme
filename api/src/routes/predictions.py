@@ -19,17 +19,19 @@ def predict(with_polytope=False):
         all_labels = exploration_manager.data.predict_user_labels(
             exploration_manager.active_learner.polytope_model
         )
+        label_types = {0: "NEGATIVE", 0.5: "UNKNOWN", 1: "POSITIVE"}
     else:
         all_labels = exploration_manager.compute_user_labels_prediction()
+        label_types = {0: "NEGATIVE", 1: "POSITIVE"}
 
     response = [
         {
-            "dataPoint": {"id": int(idx)},
-            "label": "POSITIVE" if label > 0 else "NEGATIVE",
+            "id": int(idx),
+            "label": label_types[label],
         }
         for (idx, label) in zip(all_labels.index, all_labels.labels)
     ]
-    response.sort(key=lambda x: x["dataPoint"]["id"])
+    response.sort(key=lambda x: x["id"])
     return jsonify(response)
 
 
@@ -60,9 +62,7 @@ def download_labeled_dataset():
 
         for idx in all_labels.index.argsort():
             writer.writerow(
-                [int(all_labels.index[idx])]
-                + exploration_manager.data.data[idx].tolist()
-                + [int(all_labels.labels[idx])]
+                [int(all_labels.index[idx])] + [int(all_labels.labels[idx])]
             )
 
         output.close()
