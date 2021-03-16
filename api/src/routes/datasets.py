@@ -38,6 +38,9 @@ def summarize_dataset(filepath, separator):
     engine = None if separator in [",", ";"] else "python"
     dataset = pd.read_csv(filepath, sep=separator, engine=engine)
 
+    if dataset.isnull().sum().sum() > 0:
+        return {"error": "Please upload a dataset without missing values."}
+
     is_object = dataset.apply(lambda x: x.dtype == np.object)
     is_int = dataset.apply(lambda x: x.dtype == np.int64)
     num_unique_values = dataset.apply(lambda x: len(x.unique()))
