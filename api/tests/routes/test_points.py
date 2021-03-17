@@ -238,7 +238,9 @@ def test_get_next_points_to_label(client, monkeypatch):
         monkeypatch.setattr(
             src.routes.points.cache,
             "get",
-            lambda key: exploration_manager,
+            lambda key: exploration_manager
+            if key == "exploration_manager"
+            else case["partition"],
         )
 
         response = client.post(

@@ -9,6 +9,8 @@ from aideme.initial_sampling import random_sampler
 from aideme.explore import LabeledSet, PartitionedDataset, ExplorationManager
 from aideme.active_learning import SimpleMargin, KernelVersionSpace
 from aideme.active_learning.dsm import FactorizedDualSpaceModel
+from aideme.active_learning.version_space import SubspatialVersionSpace
+
 
 from .endpoints import (
     INITIAL_UNLABELED_POINTS,
@@ -21,27 +23,52 @@ from ..utils import get_dataset_path
 bp = Blueprint("points to label", __name__)
 
 
-def create_simple_margin(params):
-    return SimpleMargin(
-        C=params["C"],
-        kernel=params["kernel"]["name"]
-        if params["kernel"]["name"] != "gaussian"
+def extract_simple_margin_params(learner_config):
+    return {
+        "type": "SimpleMargin",
+        "C": learner_config["C"],
+        "kernel": learner_config["kernel"]["name"]
+        if learner_config["kernel"]["name"] != "gaussian"
         else "rbf",
-        gamma=params["kernel"]["gamma"] if params["kernel"]["gamma"] > 0 else "auto",
-    )
+        "gamma": learner_config["kernel"]["gamma"]
+        if learner_config["kernel"]["gamma"] > 0
+        else "auto",
+    }
 
 
-def create_kernel_version_space(params):
+def extract_version_space_params(learner_config):
+    return {
+        "type": "VersionSpace",
+        "n_samples": learner_config["sampleSize"],
+        "add_intercept": learner_config["versionSpace"]["addIntercept"],
+        "cache_samples": learner_config["versionSpace"]["hitAndRunSampler"]["cache"],
+        "rounding": learner_config["versionSpace"]["hitAndRunSampler"]["rounding"],
+        "thin": learner_config["versionSpace"]["hitAndRunSampler"]["selector"]["thin"],
+        "warmup": learner_config["versionSpace"]["hitAndRunSampler"]["selector"][
+            "warmUp"
+        ],
+        "kernel": learner_config["versionSpace"]["kernel"]["name"]
+        if learner_config["versionSpace"]["kernel"]["name"] != "gaussian"
+        else "rbf",
+    }
+
+
+def create_active_learner(params):
+    if params["type"] == "SimpleMargin":
+        return SimpleMargin(
+            C=params["C"],
+            kernel=params["kernel"],
+            gamma=params["gamma"],
+        )
+
     return KernelVersionSpace(
-        n_samples=params["sampleSize"],
-        add_intercept=params["versionSpace"]["addIntercept"],
-        cache_samples=params["versionSpace"]["hitAndRunSampler"]["cache"],
-        rounding=params["versionSpace"]["hitAndRunSampler"]["rounding"],
-        thin=params["versionSpace"]["hitAndRunSampler"]["selector"]["thin"],
-        warmup=params["versionSpace"]["hitAndRunSampler"]["selector"]["warmUp"],
-        kernel=params["versionSpace"]["kernel"]["name"]
-        if params["versionSpace"]["kernel"]["name"] != "gaussian"
-        else "rbf",
+        n_samples=params["n_samples"],
+        add_intercept=params["add_intercept"],
+        cache_samples=params["cache_samples"],
+        rounding=params["rounding"],
+        thin=params["thin"],
+        warmup=params["warmup"],
+        kernel=params["kernel"],
     )
 
 
@@ -84,56 +111,73 @@ def get_initial_points_to_label():
     configuration = json.loads(request.form["configuration"])
     column_ids = json.loads(request.form["columnIds"])
 
-    if configuration["activeLearner"]["name"] == "SimpleMargin":
-        active_learner = create_simple_margin(
+    use_simple_margin = configuration["activeLearner"]["name"] == "SimpleMargin"
+
+    if use_simple_margin:
+        active_learner_params = extract_simple_margin_params(
             configuration["activeLearner"]["svmLearner"]
         )
+
     else:
-        active_learner = create_kernel_version_space(
+        active_learner_params = extract_version_space_params(
             configuration["activeLearner"]["learner"]
         )
 
-    is_tsm = "multiTSM" in configuration
+    with_factorization = "multiTSM" in configuration
 
-    if is_tsm:
+    if with_factorization:
         partition, unique_column_ids = compute_partition_in_new_indexes(
             column_ids,
             configuration["multiTSM"]["columns"],
             configuration["multiTSM"]["featureGroups"],
         )
-        sample_unknown_proba = configuration["multiTSM"][
-            "searchUnknownRegionProbability"
-        ]
-        mode = [
-            "categorical" if flag[1] else "persist"
-            for flag in configuration["multiTSM"]["flags"]
-        ]
+        if use_simple_margin:
+            sample_unknown_proba = configuration["multiTSM"][
+                "searchUnknownRegionProbability"
+            ]
+            mode = [
+                "categorical" if flag[1] else "persist"
+                for flag in configuration["multiTSM"]["flags"]
+            ]
+            active_learner = FactorizedDualSpaceModel(
+                create_active_learner(active_learner_params),
+                sample_unknown_proba,
+                partition,
+                mode,
+            )
+        else:
+            active_learner = SubspatialVersionSpace(
+                partition,
+                n_samples=active_learner_params["n_samples"],
+                add_intercept=active_learner_params["add_intercept"],
+                cache_samples=active_learner_params["cache_samples"],
+                rounding=active_learner_params["rounding"],
+                thin=active_learner_params["thin"],
+                warmup=active_learner_params["warmup"],
+                kernel=active_learner_params["kernel"],
+            )
     else:
         unique_column_ids = column_ids
         partition = None
+        active_learner = create_active_learner(active_learner_params)
 
     dataset = pd.read_csv(
         get_dataset_path(),
         cache.get("separator"),
         usecols=unique_column_ids,
     ).to_numpy()
-    # TODO: normalize, categorical columns, null values
+    # TODO: normalize, categorical columns
 
     exploration_manager = ExplorationManager(
         PartitionedDataset(dataset, copy=False),
-        active_learner=FactorizedDualSpaceModel(
-            active_learner,
-            sample_unknown_proba,
-            partition,
-            mode,
-        )
-        if is_tsm
-        else active_learner,
+        active_learner=active_learner,
         subsampling=configuration["subsampleSize"],
         initial_sampler=random_sampler(sample_size=3),
     )
 
     cache.set("exploration_manager", exploration_manager)
+    if with_factorization:
+        cache.set("partition", partition)
 
     next_points_to_label = exploration_manager.get_next_to_label()
     return jsonify(format_points_to_label(next_points_to_label, partition))
@@ -144,11 +188,11 @@ def get_initial_points_to_label():
 def get_next_points_to_label():
     labeled_points = json.loads(request.form["labeledPoints"])
 
-    is_tsm = "labels" in labeled_points[0]
+    with_factorization = "labels" in labeled_points[0]
 
     exploration_manager = cache.get("exploration_manager")
 
-    if is_tsm:
+    if with_factorization:
         exploration_manager.update(
             LabeledSet(
                 labels=[np.prod(point["labels"]) for point in labeled_points],
@@ -156,7 +200,7 @@ def get_next_points_to_label():
                 index=[point["id"] for point in labeled_points],
             )
         )
-        partition = exploration_manager.active_learner.polytope_model.partition
+        partition = cache.get("partition")
     else:
         exploration_manager.update(
             LabeledSet(
