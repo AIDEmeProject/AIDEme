@@ -3,7 +3,7 @@ import json
 import pandas as pd
 
 from aideme.explore import ExplorationManager, PartitionedDataset
-from aideme.explore.partitioned import IndexedDataset
+
 from aideme.active_learning import KernelVersionSpace
 from aideme.active_learning.dsm import FactorizedDualSpaceModel
 from aideme.initial_sampling import random_sampler
@@ -13,7 +13,7 @@ from src.routes.endpoints import (
     INITIAL_UNLABELED_POINTS,
     NEXT_UNLABELED_POINTS,
 )
-from src.routes.points import compute_partition_in_new_indexes, format_points_to_label
+from src.routes.points import compute_partition_in_new_indexes
 
 
 TEST_DATASET_PATH = os.path.join(
@@ -127,44 +127,6 @@ def test_compute_partition_in_new_indexes():
         )
 
 
-def test_format_points_to_label():
-    cases = [
-        {
-            "args": {
-                "points": IndexedDataset(data=[[33, 1]], index=[0]),
-                "partition": None,
-            },
-            "expected_output": [
-                {
-                    "id": 0,
-                    "data": {"array": [33, 1]},
-                }
-            ],
-        },
-        {
-            "args": {
-                "points": IndexedDataset(data=[[33, 1]], index=[0]),
-                "partition": [[0, 1], [0]],
-            },
-            "expected_output": [
-                {
-                    "id": 0,
-                    "data": {"array": [33, 1, 33]},
-                }
-            ],
-        },
-    ]
-
-    for case in cases:
-        assert (
-            format_points_to_label(
-                case["args"]["points"],
-                case["args"]["partition"],
-            )
-            == case["expected_output"]
-        )
-
-
 def test_get_initial_points_to_label(client, monkeypatch):
     def use_config(configuration, column_ids):
         response = client.post(
@@ -178,9 +140,7 @@ def test_get_initial_points_to_label(client, monkeypatch):
 
         assert isinstance(points_to_label, list)
         assert len(points_to_label) == 3
-        assert {"id", "data"} <= points_to_label[0].keys()
-        assert "array" in points_to_label[0]["data"]
-        assert len(points_to_label[0]["data"]["array"]) == len(column_ids)
+        assert isinstance(points_to_label[0], int)
 
     monkeypatch.setattr(
         src.routes.points,
@@ -201,18 +161,18 @@ def test_get_next_points_to_label(client, monkeypatch):
             "selected_columns": SELECTED_COLS,
             "partition": None,
             "labeled_points": [
-                {"id": 3, "label": 1, "data": {"array": [8, 0.5]}},
-                {"id": 9, "label": 1, "data": {"array": [43, 0.5]}},
-                {"id": 11, "label": 0, "data": {"array": [28, 0.6]}},
+                {"id": 3, "label": 1},
+                {"id": 9, "label": 1},
+                {"id": 11, "label": 0},
             ],
         },
         {
             "selected_columns": [1, 2, 3],
             "partition": [[0, 2], [1, 2]],
             "labeled_points": [
-                {"id": 3, "labels": [1, 0], "data": {"array": [8, 0.5, 0, 0.5]}},
-                {"id": 9, "labels": [0, 1], "data": {"array": [43, 0.5, 1, 0.5]}},
-                {"id": 11, "labels": [1, 1], "data": {"array": [28, 0.6, 0, 0.6]}},
+                {"id": 3, "labels": [1, 0]},
+                {"id": 9, "labels": [0, 1]},
+                {"id": 11, "labels": [1, 1]},
             ],
         },
     ]
@@ -236,11 +196,7 @@ def test_get_next_points_to_label(client, monkeypatch):
         )
 
         monkeypatch.setattr(
-            src.routes.points.cache,
-            "get",
-            lambda key: exploration_manager
-            if key == "exploration_manager"
-            else case["partition"],
+            src.routes.points.cache, "get", lambda key: exploration_manager
         )
 
         response = client.post(
@@ -252,8 +208,4 @@ def test_get_next_points_to_label(client, monkeypatch):
 
         assert isinstance(points_to_label, list)
         assert len(points_to_label) == 1
-        assert {"id", "data"} <= points_to_label[0].keys()
-        assert "array" in points_to_label[0]["data"]
-        assert len(points_to_label[0]["data"]["array"]) == len(
-            case["labeled_points"][0]["data"]["array"]
-        )
+        assert isinstance(points_to_label[0], int)

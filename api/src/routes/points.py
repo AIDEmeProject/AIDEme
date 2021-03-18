@@ -89,22 +89,6 @@ def compute_partition_in_new_indexes(column_ids, column_names, partition_in_name
     return partition, unique_column_ids
 
 
-def format_points_to_label(points, partition=None):
-    return [
-        {
-            "id": int(original_idx),
-            "data": {
-                "array": points.data[current_idx].tolist()
-                if partition is None
-                else points.data[current_idx][
-                    [num for group in partition for num in group]
-                ].tolist()
-            },
-        }
-        for current_idx, original_idx in enumerate(points.index)
-    ]
-
-
 @bp.route(INITIAL_UNLABELED_POINTS, methods=["POST"])
 @cross_origin(supports_credentials=True)
 def get_initial_points_to_label():
@@ -180,7 +164,7 @@ def get_initial_points_to_label():
         cache.set("partition", partition)
 
     next_points_to_label = exploration_manager.get_next_to_label()
-    return jsonify(format_points_to_label(next_points_to_label, partition))
+    return jsonify(next_points_to_label.index.tolist())
 
 
 @bp.route(NEXT_UNLABELED_POINTS, methods=["POST"])
@@ -200,7 +184,6 @@ def get_next_points_to_label():
                 index=[point["id"] for point in labeled_points],
             )
         )
-        partition = cache.get("partition")
     else:
         exploration_manager.update(
             LabeledSet(
@@ -208,14 +191,8 @@ def get_next_points_to_label():
                 index=[point["id"] for point in labeled_points],
             )
         )
-        partition = None
 
     cache.set("exploration_manager", exploration_manager)
 
     next_points_to_label = exploration_manager.get_next_to_label()
-    return jsonify(
-        format_points_to_label(
-            next_points_to_label,
-            partition,
-        )
-    )
+    return jsonify(next_points_to_label.index.tolist())
