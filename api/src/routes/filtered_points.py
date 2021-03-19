@@ -15,8 +15,8 @@ bp = Blueprint("filtered points to label", __name__)
 
 def filter_points(filters):
     separator = cache.get("separator")
-    cols = [f["columnName"] for f in filters]
-    dataset = pd.read_csv(get_dataset_path(), separator, usecols=cols)
+    columns = [f["columnName"] for f in filters]
+    dataset = pd.read_csv(get_dataset_path(), separator, usecols=columns)
 
     filtered = pd.Series(True, index=list(range(len(dataset))))
     for f in filters:
@@ -25,7 +25,7 @@ def filter_points(filters):
             filtered &= dataset[col_name] >= f["min"]
         if "max" in f.keys():
             filtered &= dataset[col_name] <= f["max"]
-        if "filterValues" in f.keys():
+        if f.get("filterValues"):
             filtered &= dataset[col_name].isin(f["filterValues"])
 
     return filtered

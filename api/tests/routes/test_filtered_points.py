@@ -9,6 +9,7 @@ from aideme.active_learning import SimpleMargin
 from aideme.initial_sampling import random_sampler
 
 import src.routes.filtered_points
+from src.routes.filtered_points import filter_points
 from src.routes.endpoints import FILTERED_UNLABELED_POINTS
 from src.config.general import UPLOAD_FOLDER
 from src.utils import get_dataset_path
@@ -19,7 +20,48 @@ TEST_DATASET_PATH = os.path.join(
 SEPARATOR = ","
 
 
-def test_filter_points(client, monkeypatch):
+def test_filter_points(monkeypatch):
+    cases = [
+        {
+            "filters": [{"columnName": "indice_glycemique"}],
+            "expected_num_points": 16,
+        },
+        {
+            "filters": [{"columnName": "sex", "filterValues": []}],
+            "expected_num_points": 16,
+        },
+        {
+            "filters": [{"columnName": "age", "min": 66}],
+            "expected_num_points": 2,
+        },
+        {
+            "filters": [{"columnName": "age", "max": 23}],
+            "expected_num_points": 7,
+        },
+        {
+            "filters": [{"columnName": "sex", "filterValues": [1]}],
+            "expected_num_points": 9,
+        },
+        {
+            "filters": [
+                {"columnName": "age", "min": 24.82, "max": 48.02},
+                {"columnName": "sex", "filterValues": [1]},
+                {"columnName": "indice_glycemique"},
+            ],
+            "expected_num_points": 3,
+        },
+    ]
+
+    monkeypatch.setattr(src.routes.filtered_points.cache, "get", lambda key: SEPARATOR)
+    monkeypatch.setattr(
+        src.routes.filtered_points, "get_dataset_path", lambda: TEST_DATASET_PATH
+    )
+
+    for case in cases:
+        assert filter_points(case["filters"]).sum() == case["expected_num_points"]
+
+
+def test_filter_points_to_label(client, monkeypatch):
     if not os.path.isdir(UPLOAD_FOLDER):
         os.mkdir(UPLOAD_FOLDER)
 

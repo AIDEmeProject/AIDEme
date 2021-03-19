@@ -6,6 +6,7 @@ from flask import Blueprint, request
 from flask_cors import cross_origin
 
 from .endpoints import DATASETS
+from ..config.general import MAX_UNIQUE_VALUES
 from ..cache import cache
 from ..utils import get_dataset_path
 
@@ -44,9 +45,14 @@ def summarize_dataset(filepath, separator):
     is_object = dataset.apply(lambda x: x.dtype == np.object)
     is_int = dataset.apply(lambda x: x.dtype == np.int64)
     num_unique_values = dataset.apply(lambda x: len(x.unique()))
-    is_categorical = is_object | (is_int & (num_unique_values < 0.2 * len(dataset)))
+    displayed_as_categorical = is_object | (
+        is_int & (num_unique_values <= min(MAX_UNIQUE_VALUES, 0.2 * len(dataset)))
+    )
 
     return {
         "columns": dataset.columns.tolist(),
-        "types": ["categorical" if value else "numerical" for value in is_categorical],
+        "types": [
+            "categorical" if value else "numerical"
+            for value in displayed_as_categorical
+        ],
     }
