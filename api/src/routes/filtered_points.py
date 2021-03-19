@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
 
 from .endpoints import FILTERED_UNLABELED_POINTS
+from ..config.general import MAX_FILTERED_POINTS
 from ..utils import get_dataset_path
 from ..cache import cache
 
@@ -42,5 +43,6 @@ def filter_points_to_label():
     return jsonify(
         filtered.iloc[exploration_manager.data.unlabeled.index]
         .loc[lambda x: x]
+        .head(MAX_FILTERED_POINTS)
         .index.tolist()
     )
