@@ -9,6 +9,11 @@ from aideme.active_learning.dsm import FactorizedDualSpaceModel
 from aideme.initial_sampling import random_sampler
 
 import src.routes.points
+from src.routes.points import (
+    encode_and_normalize,
+    compute_indexes_mapping,
+    compute_partition_in_encoded_indexes,
+)
 from src.routes.endpoints import (
     INITIAL_UNLABELED_POINTS,
     NEXT_UNLABELED_POINTS,
@@ -17,10 +22,10 @@ from src.routes.points import compute_partition_in_new_indexes
 
 
 TEST_DATASET_PATH = os.path.join(
-    __file__.split(sep="tests")[0], "tests", "data", "numeric_medium.csv"
+    __file__.split(sep="tests")[0], "tests", "data", "cars_raw_20.csv"
 )
 SEPARATOR = ","
-SELECTED_COLS = [1, 3]
+SELECTED_COLS = [2, 3]
 
 SIMPLE_MARGIN_CONFIGURATION = {
     "activeLearner": {
@@ -127,6 +132,53 @@ def test_compute_partition_in_new_indexes():
         )
 
 
+def test_encode_and_normalize():
+    transformed_dataset = encode_and_normalize(
+        TEST_DATASET_PATH, SEPARATOR, SELECTED_COLS
+    )
+    assert transformed_dataset.shape[0] == 20
+    assert transformed_dataset.shape[1] == 2
+
+
+def test_compute_indexes_mapping():
+    cases = [
+        {
+            "column_ids": [0, 1],
+            "new_column_names": ["0_red", "0_green", "1"],
+            "expected_output": {0: [0, 1], 1: [2]},
+        },
+        {
+            "column_ids": [1, 3, 6],
+            "new_column_names": ["1", "3_orange", "3_apple", "6_fish"],
+            "expected_output": {1: [0], 3: [1, 2], 6: [3]},
+        },
+    ]
+
+    for case in cases:
+        assert (
+            compute_indexes_mapping(case["column_ids"], case["new_column_names"])
+            == case["expected_output"]
+        )
+
+
+def test_compute_new_partition():
+    cases = [
+        {
+            "partition": [[0, 2], [1]],
+            "indexes_mapping": {0: [0, 1], 1: [2], 2: [3, 4]},
+            "expected_output": [[0, 1, 3, 4], [2]],
+        }
+    ]
+
+    for case in cases:
+        assert (
+            compute_partition_in_encoded_indexes(
+                case["partition"], case["indexes_mapping"]
+            )
+            == case["expected_output"]
+        )
+
+
 def test_get_initial_points_to_label(client, monkeypatch):
     def use_config(configuration, column_ids):
         response = client.post(
@@ -178,18 +230,28 @@ def test_get_next_points_to_label(client, monkeypatch):
     ]
 
     for case in cases:
-        is_tsm = case["partition"] is not None
+        transformed_dataset = encode_and_normalize(
+            TEST_DATASET_PATH, SEPARATOR, case["selected_columns"]
+        )
 
-        dataset = pd.read_csv(
-            TEST_DATASET_PATH, sep=SEPARATOR, usecols=case["selected_columns"]
-        )
-        active_learner = (
-            FactorizedDualSpaceModel(KernelVersionSpace(), partition=case["partition"])
-            if is_tsm
-            else KernelVersionSpace()
-        )
+        if case["partition"] is not None:
+            indexes_mapping = compute_indexes_mapping(
+                list(range(len(case["selected_columns"]))), transformed_dataset.columns
+            )
+            new_partition = compute_partition_in_encoded_indexes(
+                case["partition"], indexes_mapping
+            )
+            active_learner = FactorizedDualSpaceModel(
+                KernelVersionSpace(), partition=new_partition
+            )
+        else:
+            active_learner = KernelVersionSpace()
+
         exploration_manager = ExplorationManager(
-            PartitionedDataset(dataset, copy=False),
+            PartitionedDataset(
+                transformed_dataset,
+                copy=False,
+            ),
             active_learner,
             subsampling=50000,
             initial_sampler=random_sampler(sample_size=3),
