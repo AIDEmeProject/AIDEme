@@ -82,15 +82,23 @@ def test_filter_points_to_label(client, monkeypatch):
         lambda key: exploration_manager if key == "exploration_manager" else SEPARATOR,
     )
 
+    labeled_points = [
+        {"id": 0, "label": 0},
+        {"id": 14, "label": 1},
+    ]
     filters = [
         {"columnName": "age", "min": 24.82, "max": 48.02},
         {"columnName": "sex", "filterValues": [1]},
         {"columnName": "indice_glycemique"},
     ]
     response = client.post(
-        FILTERED_UNLABELED_POINTS, data={"filters": json.dumps(filters)}
+        FILTERED_UNLABELED_POINTS,
+        data={
+            "labeledPoints": json.dumps(labeled_points),
+            "filters": json.dumps(filters),
+        },
     )
 
     filtered_unlabeled_points = json.loads(response.data)
 
-    assert filtered_unlabeled_points == [2, 14]
+    assert filtered_unlabeled_points == [2]

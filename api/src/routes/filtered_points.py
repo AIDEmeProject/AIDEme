@@ -7,7 +7,7 @@ from flask_cors import cross_origin
 
 from .endpoints import FILTERED_UNLABELED_POINTS
 from ..config.general import MAX_FILTERED_POINTS
-from ..utils import get_dataset_path
+from ..utils import get_dataset_path, create_labeled_set
 from ..cache import cache
 
 bp = Blueprint("filtered points to label", __name__)
@@ -35,10 +35,14 @@ def filter_points(filters):
 @cross_origin(supports_credentials=True)
 def filter_points_to_label():
     filters = json.loads(request.form["filters"])
+    labeled_points = json.loads(request.form["labeledPoints"])
 
     filtered = filter_points(filters)
 
     exploration_manager = cache.get("exploration_manager")
+    if len(labeled_points) > 0:
+        exploration_manager.update(create_labeled_set(labeled_points))
+        cache.set("exploration_manager", exploration_manager)
 
     return jsonify(
         filtered.iloc[exploration_manager.data.unlabeled.index]

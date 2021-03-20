@@ -1,12 +1,11 @@
 import json
 import pandas as pd
-import numpy as np
 
 from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
 
 from aideme.initial_sampling import random_sampler
-from aideme.explore import LabeledSet, PartitionedDataset, ExplorationManager
+from aideme.explore import PartitionedDataset, ExplorationManager
 from aideme.active_learning import SimpleMargin, KernelVersionSpace
 from aideme.active_learning.dsm import FactorizedDualSpaceModel
 from aideme.active_learning.version_space import SubspatialVersionSpace
@@ -17,7 +16,7 @@ from .endpoints import (
     NEXT_UNLABELED_POINTS,
 )
 from ..cache import cache
-from ..utils import get_dataset_path
+from ..utils import get_dataset_path, create_labeled_set
 
 
 bp = Blueprint("points to label", __name__)
@@ -172,26 +171,8 @@ def get_initial_points_to_label():
 def get_next_points_to_label():
     labeled_points = json.loads(request.form["labeledPoints"])
 
-    with_factorization = "labels" in labeled_points[0]
-
     exploration_manager = cache.get("exploration_manager")
-
-    if with_factorization:
-        exploration_manager.update(
-            LabeledSet(
-                labels=[np.prod(point["labels"]) for point in labeled_points],
-                partial=[point["labels"] for point in labeled_points],
-                index=[point["id"] for point in labeled_points],
-            )
-        )
-    else:
-        exploration_manager.update(
-            LabeledSet(
-                labels=[point["label"] for point in labeled_points],
-                index=[point["id"] for point in labeled_points],
-            )
-        )
-
+    exploration_manager.update(create_labeled_set(labeled_points))
     cache.set("exploration_manager", exploration_manager)
 
     next_points_to_label = exploration_manager.get_next_to_label()
