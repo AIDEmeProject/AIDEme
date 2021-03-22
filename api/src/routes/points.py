@@ -121,12 +121,9 @@ def compute_partition_in_encoded_indexes(partition, indexes_mapping):
     return new_partition
 
 
-@bp.route(INITIAL_UNLABELED_POINTS, methods=["POST"])
-@cross_origin(supports_credentials=True)
-def get_initial_points_to_label():
-    configuration = json.loads(request.form["configuration"])
-    column_ids = json.loads(request.form["columnIds"])
-
+def create_exploration_manager(
+    dataset_path, separator, column_ids, configuration, encode=True
+):
     use_simple_margin = configuration["activeLearner"]["name"] == "SimpleMargin"
 
     if use_simple_margin:
@@ -159,19 +156,28 @@ def get_initial_points_to_label():
         unique_column_ids = column_ids
         partition = None
 
-    separator = cache.get("separator")
-
-    transformed_dataset = encode_and_normalize(
-        get_dataset_path(), separator, unique_column_ids
-    )
+    if encode:
+        transformed_dataset = encode_and_normalize(
+            dataset_path, separator, unique_column_ids
+        )
+        if with_factorization:
+            indexes_mapping = compute_indexes_mapping(
+                list(range(len(unique_column_ids))), transformed_dataset.columns
+            )
+            new_partition = compute_partition_in_encoded_indexes(
+                partition, indexes_mapping
+            )
+        else:
+            new_partition = partition
+    else:
+        transformed_dataset = pd.read_csv(
+            dataset_path,
+            separator,
+            usecols=unique_column_ids,
+        )
+        new_partition = partition
 
     if with_factorization:
-        indexes_mapping = compute_indexes_mapping(
-            list(range(len(unique_column_ids))), transformed_dataset.columns
-        )
-
-        new_partition = compute_partition_in_encoded_indexes(partition, indexes_mapping)
-
         if use_simple_margin:
             active_learner = FactorizedDualSpaceModel(
                 create_active_learner(active_learner_params),
@@ -193,7 +199,7 @@ def get_initial_points_to_label():
     else:
         active_learner = create_active_learner(active_learner_params)
 
-    exploration_manager = ExplorationManager(
+    return ExplorationManager(
         PartitionedDataset(
             transformed_dataset.to_numpy(),
             copy=False,
@@ -203,9 +209,20 @@ def get_initial_points_to_label():
         initial_sampler=random_sampler(sample_size=3),
     )
 
+
+@bp.route(INITIAL_UNLABELED_POINTS, methods=["POST"])
+@cross_origin(supports_credentials=True)
+def get_initial_points_to_label():
+    configuration = json.loads(request.form["configuration"])
+    column_ids = json.loads(request.form["columnIds"])
+
+    separator = cache.get("separator")
+
+    exploration_manager = create_exploration_manager(
+        get_dataset_path(), separator, column_ids, configuration
+    )
+
     cache.set("exploration_manager", exploration_manager)
-    if with_factorization:
-        cache.set("partition", partition)
 
     next_points_to_label = exploration_manager.get_next_to_label()
     return jsonify(next_points_to_label.index.tolist())
