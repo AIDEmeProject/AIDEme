@@ -88,6 +88,39 @@ def compute_partition_in_new_indexes(column_ids, column_names, partition_in_name
     return partition, unique_column_ids
 
 
+def encode_and_normalize(filepath, separator, column_ids):
+    dataset = pd.read_csv(
+        filepath,
+        separator,
+        usecols=column_ids,
+    )
+    dataset.columns = [str(idx) for idx in range(len(column_ids))]
+
+    dataset = pd.get_dummies(dataset, drop_first=True)
+    return dataset.apply(lambda x: (x - x.mean()) / x.std() if x.std() != 0 else x)
+
+
+def compute_indexes_mapping(column_ids, new_column_names):
+    indexes_mapping = {}
+    for idx in column_ids:
+        indexes_mapping[idx] = [
+            new_idx
+            for new_idx, name in enumerate(new_column_names)
+            if name.startswith(str(idx))
+        ]
+    return indexes_mapping
+
+
+def compute_partition_in_encoded_indexes(partition, indexes_mapping):
+    new_partition = []
+    for group in partition:
+        new_group = []
+        for idx in group:
+            new_group += indexes_mapping[idx]
+        new_partition.append(new_group)
+    return new_partition
+
+
 @bp.route(INITIAL_UNLABELED_POINTS, methods=["POST"])
 @cross_origin(supports_credentials=True)
 def get_initial_points_to_label():
@@ -122,15 +155,33 @@ def get_initial_points_to_label():
                 "categorical" if flag[1] else "persist"
                 for flag in configuration["multiTSM"]["flags"]
             ]
+    else:
+        unique_column_ids = column_ids
+        partition = None
+
+    separator = cache.get("separator")
+
+    transformed_dataset = encode_and_normalize(
+        get_dataset_path(), separator, unique_column_ids
+    )
+
+    if with_factorization:
+        indexes_mapping = compute_indexes_mapping(
+            list(range(len(unique_column_ids))), transformed_dataset.columns
+        )
+
+        new_partition = compute_partition_in_encoded_indexes(partition, indexes_mapping)
+
+        if use_simple_margin:
             active_learner = FactorizedDualSpaceModel(
                 create_active_learner(active_learner_params),
                 sample_unknown_proba,
-                partition,
+                new_partition,
                 mode,
             )
         else:
             active_learner = SubspatialVersionSpace(
-                partition,
+                new_partition,
                 n_samples=active_learner_params["n_samples"],
                 add_intercept=active_learner_params["add_intercept"],
                 cache_samples=active_learner_params["cache_samples"],
@@ -140,19 +191,13 @@ def get_initial_points_to_label():
                 kernel=active_learner_params["kernel"],
             )
     else:
-        unique_column_ids = column_ids
-        partition = None
         active_learner = create_active_learner(active_learner_params)
 
-    dataset = pd.read_csv(
-        get_dataset_path(),
-        cache.get("separator"),
-        usecols=unique_column_ids,
-    ).to_numpy()
-    # TODO: normalize, categorical columns
-
     exploration_manager = ExplorationManager(
-        PartitionedDataset(dataset, copy=False),
+        PartitionedDataset(
+            transformed_dataset.to_numpy(),
+            copy=False,
+        ),
         active_learner=active_learner,
         subsampling=configuration["subsampleSize"],
         initial_sampler=random_sampler(sample_size=3),
