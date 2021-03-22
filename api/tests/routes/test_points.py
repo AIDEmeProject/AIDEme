@@ -9,16 +9,16 @@ from aideme.active_learning.dsm import FactorizedDualSpaceModel
 from aideme.initial_sampling import random_sampler
 
 import src.routes.points
-from src.routes.points import (
+from src.routes.create_manager import (
     encode_and_normalize,
     compute_indexes_mapping,
     compute_partition_in_encoded_indexes,
+    compute_partition_in_new_indexes,
 )
 from src.routes.endpoints import (
     INITIAL_UNLABELED_POINTS,
     NEXT_UNLABELED_POINTS,
 )
-from src.routes.points import compute_partition_in_new_indexes
 
 from tests.routes.data import (
     SIMPLE_MARGIN_CONFIGURATION,
