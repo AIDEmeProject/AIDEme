@@ -63,6 +63,8 @@ SELECTED_COLS_IN_ENCODED_DATASET = [
     530,
 ]
 
+ALGORITHM = "simplemargintsm"
+
 SIMPLE_MARGIN_CONFIGURATION = {
     "activeLearner": {
         "name": "SimpleMargin",
