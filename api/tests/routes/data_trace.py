@@ -1,6 +1,6 @@
 ENCODED_DATASET_NAME = "cars_encoded.csv"
-
 SEPARATOR = ","
+NUM_ROWS = 5622
 
 SELECTED_COLS_IN_ENCODED_DATASET = [
     2,
@@ -64,7 +64,6 @@ SELECTED_COLS_IN_ENCODED_DATASET = [
 ]
 
 ALGORITHM = "simplemargintsm"
-
 SIMPLE_MARGIN_CONFIGURATION = {
     "activeLearner": {
         "name": "SimpleMargin",
@@ -77,7 +76,6 @@ SIMPLE_MARGIN_CONFIGURATION = {
     "subsampleSize": 50000,
     "useFactorizationInformation": False,
 }
-
 FACTORIZED_SIMPLE_MARGIN_CONFIGURATION = {
     **SIMPLE_MARGIN_CONFIGURATION,
     "multiTSM": {
