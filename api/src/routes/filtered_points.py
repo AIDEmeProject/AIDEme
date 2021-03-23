@@ -6,8 +6,9 @@ from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
 
 from .endpoints import FILTERED_UNLABELED_POINTS
+from .create_labeled_set import create_labeled_set
 from ..config.general import MAX_FILTERED_POINTS
-from ..utils import get_dataset_path, create_labeled_set
+from ..utils import get_dataset_path
 from ..cache import cache
 
 bp = Blueprint("filtered points to label", __name__)

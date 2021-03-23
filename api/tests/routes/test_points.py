@@ -20,13 +20,12 @@ from src.routes.endpoints import (
     NEXT_UNLABELED_POINTS,
 )
 
-from tests.routes.data import (
+from tests.routes.data_points import (
     SIMPLE_MARGIN_CONFIGURATION,
     VERSION_SPACE_CONFIGURATION,
     FACTORIZED_SIMPLE_MARGIN_CONFIGURATION,
     FACTORIZED_VERSION_SPACE_CONFIGURATION,
 )
-
 
 TEST_DATASET_PATH = os.path.join(
     __file__.split(sep="tests")[0], "tests", "data", "cars_raw_20.csv"

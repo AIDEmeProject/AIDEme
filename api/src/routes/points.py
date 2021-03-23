@@ -9,8 +9,9 @@ from .endpoints import (
     NEXT_UNLABELED_POINTS,
 )
 from .create_manager import create_exploration_manager
+from .create_labeled_set import create_labeled_set
 from ..cache import cache
-from ..utils import get_dataset_path, create_labeled_set
+from ..utils import get_dataset_path
 
 
 bp = Blueprint("points to label", __name__)

@@ -2,9 +2,13 @@ import json
 
 from flask import Blueprint, request, jsonify
 
-from .endpoints import TRACE
+from aideme.active_learning.dsm import FactorizedDualSpaceModel
+
+from .endpoints import TRACE, NEXT_TRACE
+from .create_manager import create_exploration_manager
+from .create_labeled_set import create_labeled_set
+from .predictions import predict
 from ..utils import get_trace_dataset_path
-from .points import create_exploration_manager
 from ..cache import cache
 
 bp = Blueprint("trace", __name__)
@@ -29,3 +33,23 @@ def init_trace():
     cache.set("exploration_manager", exploration_manager)
 
     return jsonify(success=True)
+
+
+@bp.route(NEXT_TRACE, methods=["POST"])
+def get_predictions():
+    labeled_points = json.loads(request.form["labeledPoints"])
+
+    exploration_manager = cache.get("exploration_manager")
+    exploration_manager.update(create_labeled_set(labeled_points))
+    cache.set("exploration_manager", exploration_manager)
+
+    predictions = {"labeledPointsOverGrid": predict(exploration_manager)}
+
+    if isinstance(exploration_manager.active_learner, FactorizedDualSpaceModel):
+        predictions["TSMPredictionsOverGrid"] = predict(
+            exploration_manager, with_polytope=True
+        )
+
+    # predictions["projectionPredictions"] = []
+
+    return jsonify(predictions)

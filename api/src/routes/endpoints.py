@@ -7,3 +7,4 @@ POLYTOPE_PREDICTIONS = "/get-tsm-predictions-over-grid-point"
 LABELED_DATASET = "/get-labeled-dataset"
 
 TRACE = "/start-trace"
+NEXT_TRACE = "/get-next-traces"
