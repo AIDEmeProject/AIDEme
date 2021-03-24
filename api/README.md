@@ -48,7 +48,7 @@ Update `install_requires` or `extras_require`in `setup.py`
 Update `requirements.txt`
 
 ```
-pip freezze > requirements.txt
+pip freeze > requirements.txt
 ```
 
 - Update aideme
@@ -100,4 +100,10 @@ pytest
 ```
 cd api
 pytest path/to/test_module.py
+```
+
+- Uninstall the current package installed in editable mode
+
+```
+pip uninstall aideme-web-api
 ```
