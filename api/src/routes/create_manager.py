@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from aideme.initial_sampling import random_sampler
 from aideme.explore import PartitionedDataset, ExplorationManager
@@ -73,14 +74,8 @@ def compute_partition_in_new_indexes(column_ids, column_names, partition_in_name
     return partition, unique_column_ids
 
 
-def encode_and_normalize(filepath, separator, column_ids):
-    dataset = pd.read_csv(
-        filepath,
-        separator,
-        usecols=column_ids,
-    )
-    dataset.columns = [str(idx) for idx in range(len(column_ids))]
-
+def encode_and_normalize(dataset):
+    dataset.columns = [str(idx) for idx in range(len(dataset.columns))]
     dataset = pd.get_dummies(dataset, drop_first=True)
     return dataset.apply(lambda x: (x - x.mean()) / x.std() if x.std() != 0 else x)
 
@@ -106,8 +101,22 @@ def compute_partition_in_encoded_indexes(partition, indexes_mapping):
     return new_partition
 
 
+def compute_mode(partition, types):
+    return [
+        "persist"
+        if np.any([types[column_id] in [np.int64, np.float64] for column_id in group])
+        else "categorical"
+        for group in partition
+    ]
+
+
 def create_exploration_manager(
-    dataset_path, separator, column_ids, configuration, encode=True
+    dataset_path,
+    separator,
+    column_ids,
+    configuration,
+    encode=True,
+    precomputed_mode=False,
 ):
     use_simple_margin = configuration["activeLearner"]["name"] == "SimpleMargin"
 
@@ -129,50 +138,47 @@ def create_exploration_manager(
             configuration["multiTSM"]["columns"],
             configuration["multiTSM"]["featureGroups"],
         )
-        if use_simple_margin:
-            sample_unknown_proba = configuration["multiTSM"][
-                "searchUnknownRegionProbability"
-            ]
+    else:
+        partition = None
+        unique_column_ids = column_ids
+
+    dataset = pd.read_csv(
+        dataset_path,
+        separator,
+        usecols=unique_column_ids,
+    )
+
+    if with_factorization and use_simple_margin:
+        sample_unknown_proba = configuration["multiTSM"][
+            "searchUnknownRegionProbability"
+        ]
+        if precomputed_mode:
             mode = [
                 "categorical" if flag[1] else "persist"
                 for flag in configuration["multiTSM"]["flags"]
             ]
-    else:
-        unique_column_ids = column_ids
-        partition = None
+        else:
+            mode = compute_mode(partition, dataset.dtypes)
 
     if encode:
-        transformed_dataset = encode_and_normalize(
-            dataset_path, separator, unique_column_ids
-        )
+        dataset = encode_and_normalize(dataset)
         if with_factorization:
             indexes_mapping = compute_indexes_mapping(
-                list(range(len(unique_column_ids))), transformed_dataset.columns
+                list(range(len(unique_column_ids))), dataset.columns
             )
-            new_partition = compute_partition_in_encoded_indexes(
-                partition, indexes_mapping
-            )
-        else:
-            new_partition = partition
-    else:
-        transformed_dataset = pd.read_csv(
-            dataset_path,
-            separator,
-            usecols=unique_column_ids,
-        )
-        new_partition = partition
+            partition = compute_partition_in_encoded_indexes(partition, indexes_mapping)
 
     if with_factorization:
         if use_simple_margin:
             active_learner = FactorizedDualSpaceModel(
                 create_active_learner(active_learner_params),
                 sample_unknown_proba,
-                new_partition,
+                partition,
                 mode,
             )
         else:
             active_learner = SubspatialVersionSpace(
-                new_partition,
+                partition,
                 n_samples=active_learner_params["n_samples"],
                 add_intercept=active_learner_params["add_intercept"],
                 cache_samples=active_learner_params["cache_samples"],
@@ -186,7 +192,7 @@ def create_exploration_manager(
 
     return ExplorationManager(
         PartitionedDataset(
-            transformed_dataset.to_numpy(),
+            dataset.to_numpy(),
             copy=False,
         ),
         active_learner=active_learner,

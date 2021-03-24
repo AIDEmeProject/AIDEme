@@ -28,6 +28,7 @@ def init_trace():
         column_ids,
         configuration,
         encode=False,
+        precomputed_mode=True,
     )
 
     cache.set("exploration_manager", exploration_manager)
