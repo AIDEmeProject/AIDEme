@@ -1,58 +1,56 @@
 SIMPLE_MARGIN_CONFIGURATION = {
-    "activeLearner": {
-        "name": "SimpleMargin",
-        "svmLearner": {
-            "C": 1024,
-            "kernel": {"gamma": 0, "name": "gaussian"},
-            "name": "SVM",
-        },
-    },
-    "subsampleSize": 50000,
-    "useFactorizationInformation": False,
+    "activeLearner": {"name": "SimpleMargin", "params": {"C": 100000.0}},
+    "subsampling": 50000,
 }
+
 
 VERSION_SPACE_CONFIGURATION = {
     "activeLearner": {
-        "learner": {
-            "name": "MajorityVote",
-            "sampleSize": 8,
-            "versionSpace": {
-                "addIntercept": True,
-                "hitAndRunSampler": {
-                    "cache": True,
-                    "rounding": True,
-                    "selector": {"name": "WarmUpAndThin", "thin": 10, "warmUp": 100},
-                },
-                "kernel": {"name": "gaussian"},
-                "solver": "ojalgo",
-            },
+        "name": "KernelVersionSpace",
+        "params": {
+            "decompose": True,
+            "n_samples": 16,
+            "warmup": 100,
+            "thin": 100,
+            "rounding": True,
+            "rounding_cache": True,
+            "rounding_options": {"strategy": "opt", "z_cut": True, "sphere_cuts": True},
         },
-        "name": "UncertaintySampler",
     },
-    "subsampleSize": 50000,
-    "task": "sdss_Q4_0.1%",
+    "subsampling": 50000,
 }
+
 
 FACTORIZED_SIMPLE_MARGIN_CONFIGURATION = {
-    **SIMPLE_MARGIN_CONFIGURATION,
-    "multiTSM": {
-        "hasTsm": True,
-        "searchUnknownRegionProbability": 0.5,
-        "columns": ["age", "indice_glycemique", "sex"],
-        "decompose": True,
-        "flags": [[True, False], [True, True]],
-        "featureGroups": [["age", "indice_glycemique"], ["sex"]],
+    "activeLearner": {
+        "name": "FactorizedDualSpaceModel",
+        "params": {
+            "active_learner": {"name": "SimpleMargin", "params": {"C": 100000.0}}
+        },
+    },
+    "subsampling": 50000,
+    "factorization": {
+        "partition": [[1, 3], [2]],
     },
 }
 
+
 FACTORIZED_VERSION_SPACE_CONFIGURATION = {
-    **VERSION_SPACE_CONFIGURATION,
-    "multiTSM": {
-        "hasTsm": True,
-        "searchUnknownRegionProbability": 0.5,
-        "columns": ["age", "indice_glycemique", "sex", "indice_glycemique"],
-        "decompose": True,
-        "flags": [[True, False], [True, False]],
-        "featureGroups": [["age", "indice_glycemique"], ["sex", "indice_glycemique"]],
+    "activeLearner": {
+        "name": "SubspatialVersionSpace",
+        "params": {
+            "loss": "PRODUCT",
+            "decompose": True,
+            "n_samples": 16,
+            "warmup": 100,
+            "thin": 100,
+            "rounding": True,
+            "rounding_cache": True,
+            "rounding_options": {"strategy": "opt", "z_cut": True, "sphere_cuts": True},
+        },
+    },
+    "subsampling": 50000,
+    "factorization": {
+        "partition": [[1, 3], [2, 3]],
     },
 }

@@ -21,43 +21,30 @@ SELECTED_COLS = [2, 3]
 def test_compute_partition_in_new_indexes():
     cases = [
         {
-            "args": {
-                "column_ids": [1, 3, 2],
-                "column_names": ["age", "indice_glycemique", "sex"],
-                "partition_in_names": [["age", "indice_glycemique"], ["sex"]],
-            },
+            "partition": [[1, 3], [2]],
             "expected_output": {
                 "partition": [[0, 2], [1]],
                 "unique_column_ids": [1, 2, 3],
             },
         },
         {
-            "args": {
-                "column_ids": [1, 3, 2, 3],
-                "column_names": [
-                    "age",
-                    "indice_glycemique",
-                    "sex",
-                    "indice_glycemique",
-                ],
-                "partition_in_names": [
-                    ["age", "indice_glycemique"],
-                    ["sex", "indice_glycemique"],
-                ],
-            },
+            "partition": [[1, 3], [2, 3]],
             "expected_output": {
                 "partition": [[0, 2], [1, 2]],
                 "unique_column_ids": [1, 2, 3],
             },
         },
+        {
+            "partition": [[3, 7], [1]],
+            "expected_output": {
+                "partition": [[1, 2], [0]],
+                "unique_column_ids": [1, 3, 7],
+            },
+        },
     ]
 
     for case in cases:
-        assert compute_partition_in_new_indexes(
-            case["args"]["column_ids"],
-            case["args"]["column_names"],
-            case["args"]["partition_in_names"],
-        ) == (
+        assert compute_partition_in_new_indexes(case["partition"]) == (
             case["expected_output"]["partition"],
             case["expected_output"]["unique_column_ids"],
         )

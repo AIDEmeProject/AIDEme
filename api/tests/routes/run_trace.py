@@ -15,7 +15,6 @@ from tests.routes.data_trace import (
     SEPARATOR,
     NUM_ROWS,
     SELECTED_COLS_IN_ENCODED_DATASET,
-    ALGORITHM,
     FACTORIZED_SIMPLE_MARGIN_CONFIGURATION,
 )
 
@@ -64,7 +63,6 @@ def test_trace_with_app(client):
     response = client.post(
         TRACE,
         data={
-            "algorithm": ALGORITHM,
             "configuration": json.dumps(FACTORIZED_SIMPLE_MARGIN_CONFIGURATION),
             "columnIds": json.dumps(SELECTED_COLS_IN_ENCODED_DATASET),
             "encodedDatasetName": ENCODED_DATASET_NAME,

@@ -3,75 +3,44 @@ import numpy as np
 
 from aideme.initial_sampling import random_sampler
 from aideme.explore import PartitionedDataset, ExplorationManager
-from aideme.active_learning import SimpleMargin, KernelVersionSpace
-from aideme.active_learning.dsm import FactorizedDualSpaceModel
-from aideme.active_learning.version_space import SubspatialVersionSpace
+import aideme.active_learning
+from aideme.active_learning import (
+    ActiveLearner,
+    FactorizedActiveLearner,
+)
 
 
-def extract_simple_margin_params(learner_config):
-    return {
-        "type": "SimpleMargin",
-        "C": learner_config["C"],
-        "kernel": learner_config["kernel"]["name"]
-        if learner_config["kernel"]["name"] != "gaussian"
-        else "rbf",
-        "gamma": learner_config["kernel"]["gamma"]
-        if learner_config["kernel"]["gamma"] > 0
-        else "auto",
+def decode_active_learner(config, factorization_info) -> ActiveLearner:
+    active_learner_class = getattr(aideme.active_learning, config["name"])
+
+    # decode nester Tag values in params
+    params = config.get("params", {})
+    new_params = {}
+    for key, value in params.items():
+        if isinstance(value, dict) and "name" in value:
+            new_params[key] = decode_active_learner(value, factorization_info)
+        else:
+            new_params[key] = value
+
+    active_learner = active_learner_class(**new_params)
+
+    if isinstance(active_learner, FactorizedActiveLearner):
+        active_learner.set_factorization_structure(**factorization_info)
+
+    return active_learner
+
+
+def compute_partition_in_new_indexes(partition):
+    unique_column_ids = sorted(list(set(i for group in partition for i in group)))
+    old_to_new_index = {
+        old_idx: new_idx for (new_idx, old_idx) in enumerate(unique_column_ids)
     }
 
-
-def extract_version_space_params(learner_config):
-    return {
-        "type": "VersionSpace",
-        "n_samples": learner_config["sampleSize"],
-        "add_intercept": learner_config["versionSpace"]["addIntercept"],
-        "cache_samples": learner_config["versionSpace"]["hitAndRunSampler"]["cache"],
-        "rounding": learner_config["versionSpace"]["hitAndRunSampler"]["rounding"],
-        "thin": learner_config["versionSpace"]["hitAndRunSampler"]["selector"]["thin"],
-        "warmup": learner_config["versionSpace"]["hitAndRunSampler"]["selector"][
-            "warmUp"
-        ],
-        "kernel": learner_config["versionSpace"]["kernel"]["name"]
-        if learner_config["versionSpace"]["kernel"]["name"] != "gaussian"
-        else "rbf",
-    }
-
-
-def create_active_learner(params):
-    if params["type"] == "SimpleMargin":
-        return SimpleMargin(
-            C=params["C"],
-            kernel=params["kernel"],
-            gamma=params["gamma"],
-        )
-
-    return KernelVersionSpace(
-        n_samples=params["n_samples"],
-        add_intercept=params["add_intercept"],
-        cache_samples=params["cache_samples"],
-        rounding=params["rounding"],
-        thin=params["thin"],
-        warmup=params["warmup"],
-        kernel=params["kernel"],
-    )
-
-
-def compute_partition_in_new_indexes(column_ids, column_names, partition_in_names):
-    unique_column_ids = sorted(list(set(column_ids)))
-    new_column_ids = [
-        unique_column_ids.index(original_index) for original_index in column_ids
+    partition_in_new_indexes = [
+        [old_to_new_index[i] for i in group] for group in partition
     ]
 
-    name_to_new_index = {
-        name: new_index for name, new_index in zip(column_names, new_column_ids)
-    }
-
-    partition = [
-        [name_to_new_index[name] for name in group] for group in partition_in_names
-    ]
-
-    return partition, unique_column_ids
+    return partition_in_new_indexes, unique_column_ids
 
 
 def encode_and_normalize(dataset):
@@ -118,25 +87,12 @@ def create_exploration_manager(
     encode=True,
     precomputed_mode=False,
 ):
-    use_simple_margin = configuration["activeLearner"]["name"] == "SimpleMargin"
 
-    if use_simple_margin:
-        active_learner_params = extract_simple_margin_params(
-            configuration["activeLearner"]["svmLearner"]
-        )
-
-    else:
-        active_learner_params = extract_version_space_params(
-            configuration["activeLearner"]["learner"]
-        )
-
-    with_factorization = "multiTSM" in configuration
+    with_factorization = "factorization" in configuration
 
     if with_factorization:
         partition, unique_column_ids = compute_partition_in_new_indexes(
-            column_ids,
-            configuration["multiTSM"]["columns"],
-            configuration["multiTSM"]["featureGroups"],
+            configuration["factorization"]["partition"]
         )
     else:
         partition = None
@@ -148,15 +104,9 @@ def create_exploration_manager(
         usecols=unique_column_ids,
     )
 
-    if with_factorization and use_simple_margin:
-        sample_unknown_proba = configuration["multiTSM"][
-            "searchUnknownRegionProbability"
-        ]
+    if with_factorization:
         if precomputed_mode:
-            mode = [
-                "categorical" if flag[1] else "persist"
-                for flag in configuration["multiTSM"]["flags"]
-            ]
+            mode = configuration["factorization"]["mode"]
         else:
             mode = compute_mode(partition, dataset.dtypes)
 
@@ -169,26 +119,13 @@ def create_exploration_manager(
             partition = compute_partition_in_encoded_indexes(partition, indexes_mapping)
 
     if with_factorization:
-        if use_simple_margin:
-            active_learner = FactorizedDualSpaceModel(
-                create_active_learner(active_learner_params),
-                sample_unknown_proba,
-                partition,
-                mode,
-            )
-        else:
-            active_learner = SubspatialVersionSpace(
-                partition,
-                n_samples=active_learner_params["n_samples"],
-                add_intercept=active_learner_params["add_intercept"],
-                cache_samples=active_learner_params["cache_samples"],
-                rounding=active_learner_params["rounding"],
-                thin=active_learner_params["thin"],
-                warmup=active_learner_params["warmup"],
-                kernel=active_learner_params["kernel"],
-            )
+        factorization_info = {"partition": partition, "mode": mode}
     else:
-        active_learner = create_active_learner(active_learner_params)
+        factorization_info = {}
+
+    active_learner = decode_active_learner(
+        configuration["activeLearner"], factorization_info
+    )
 
     return ExplorationManager(
         PartitionedDataset(
@@ -196,6 +133,6 @@ def create_exploration_manager(
             copy=False,
         ),
         active_learner=active_learner,
-        subsampling=configuration["subsampleSize"],
+        subsampling=configuration["subsampling"],
         initial_sampler=random_sampler(sample_size=3),
     )
