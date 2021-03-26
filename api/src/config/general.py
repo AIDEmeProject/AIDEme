@@ -4,8 +4,7 @@ UPLOAD_FOLDER = os.path.join(__file__.split(sep="api")[0], "api", "sessions")
 DATASET_FILE = "data.csv"
 LABELED_DATASET_FILE = "labeled_dataset.csv"
 
+TRACE_FOLDER = os.path.join(__file__.split(sep="api")[0], "api", "trace")
 
-SESSION_EXPIRY_TIME_IN_SECONDS = 2 * 24 * 60 * 60
-
-REDIS_HOST = "localhost"
-REDIS_PORT = 6379
+MAX_UNIQUE_VALUES = 20
+MAX_FILTERED_POINTS = 25

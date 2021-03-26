@@ -1,5 +1,4 @@
 import os
-
 import pandas as pd
 import numpy as np
 
@@ -9,10 +8,8 @@ from aideme.explore import (
     ExplorationManager,
 )
 from aideme.explore.partitioned import IndexedDataset
-from aideme.active_learning.version_space import (
-    SubspatialSimpleMargin,
-    SubspatialVersionSpace,
-)
+from aideme.active_learning import SimpleMargin, KernelVersionSpace
+from aideme.active_learning.dsm import FactorizedDualSpaceModel
 from aideme.initial_sampling import random_sampler
 
 TEST_DATASET_PATH = os.path.join(
@@ -20,27 +17,43 @@ TEST_DATASET_PATH = os.path.join(
 )
 
 
-def test_exploration_manager_with_factorization():
-    dataset = pd.read_csv(TEST_DATASET_PATH, sep=",", usecols=[1, 2, 3]).to_numpy()
-    partition = [[0, 2], [1]]
-    steps = [
-        {"labels": [0, 0, 0], "partitions": [[0, 1], [1, 0], [0, 0]]},
-        {"labels": [0, 0, 1], "partitions": [[1, 0], [1, 0], [1, 1]]},
-        {"labels": [0], "partitions": [[0, 0]]},
-    ]
-
+def test_dsm():
     active_learners = [
-        SubspatialSimpleMargin(partition),
-        SubspatialVersionSpace(partition),
+        SimpleMargin(
+            C=1024,
+            kernel="rbf",
+            gamma="auto",
+        ),
+        KernelVersionSpace(
+            n_samples=8,
+            add_intercept=True,
+            cache_samples=True,
+            rounding=True,
+            thin=10,
+            warmup=100,
+            kernel="rbf",
+        ),
     ]
 
     for learner in active_learners:
+        dataset = pd.read_csv(TEST_DATASET_PATH, sep=",", usecols=[1, 2, 3]).to_numpy()
+
+        factorized_active_learner = FactorizedDualSpaceModel(
+            learner, partition=[[0, 2], [1, 2]]
+        )
+
         exploration_manager = ExplorationManager(
             PartitionedDataset(dataset),
-            active_learner=learner,
+            factorized_active_learner,
             subsampling=None,
             initial_sampler=random_sampler(sample_size=3),
         )
+
+        steps = [
+            {"labels": [0, 0, 0], "partitions": [[0, 1], [1, 0], [0, 0]]},
+            {"labels": [0, 0, 1], "partitions": [[1, 0], [1, 0], [1, 1]]},
+            {"labels": [0], "partitions": [[0, 0]]},
+        ]
 
         run_and_assert_exploration_manager_with_factorization(
             exploration_manager,
@@ -77,3 +90,19 @@ def run_and_assert_exploration_manager_with_factorization(
         )
 
     assert len(set(all_points_to_label)) == len(all_points_to_label)
+
+    all_labels = exploration_manager.compute_user_labels_prediction()
+    assert_predictions(all_labels, dataset)
+
+    all_polytope_labels = exploration_manager.data.predict_user_labels(
+        exploration_manager.active_learner.polytope_model
+    )
+    assert_predictions(all_polytope_labels, dataset)
+
+
+def assert_predictions(predictions, dataset):
+    assert isinstance(predictions.index, np.ndarray)
+    assert isinstance(predictions.labels, np.ndarray)
+    assert len(predictions.index) == len(dataset)
+    assert np.any(predictions.labels == 1)
+    assert np.any(predictions.labels == 0)
