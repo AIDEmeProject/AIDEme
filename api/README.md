@@ -106,20 +106,20 @@ redis -cli shutdown
 
 ### Branches
 
-- Demo branch: supports one user
+- Master branch: supports one user
 
 This branch is up to date with the frontend.
 
 ```
-git checkout demo
+git checkout master
 ```
 
-- Master branch: supports multiple users using cookies and redis
+- Web branch: supports multiple users using cookies and redis
 
 This branch is currently out of date and does not work with the current frontend.
 
 ```
-git checkout master
+git checkout web
 ```
 
 ### Run web server in development

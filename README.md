@@ -4,7 +4,7 @@
 
 AIDEme Web is the web application built upon AIDEme system.
 
-- The backend python code is in the branch `demo` of the `api` folder which has its own `README.md` file describing how to setup and run the server.
+- The backend python code is in the branch `master` of the `api` folder which has its own `README.md` file describing how to setup and run the server.
 
 - The frontend javascript code is in the branch `python` of the `src/frontend/gui` folder in the repo [`aideplus-mirror`](https://gitlab.com/lcetinsoy/aideplus-mirror).
 
