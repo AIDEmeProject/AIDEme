@@ -29,7 +29,6 @@ The issues and suggestions for frontend and backend are listed below.
 - Labeling: inform user when rows are exhausted
 
 - Model behavior: persist chosen variables in plots
-- Model behavior: should show original categorical values
 - Model behavior: MIN and MAX for categorical attributes ==> should show a list of distinct values
 - Model behavior: add help text to explain how point colors change ?
 
