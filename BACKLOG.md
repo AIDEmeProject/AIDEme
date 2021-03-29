@@ -35,6 +35,8 @@ The issues and suggestions for frontend and backend are listed below.
 
 - Change Auto-labeling to button
 
+- Exploration and TSMExploration have a lot of common code ==> should refactor into one component, use different table components for factorization and non-factorization cases
+
 ## Trace
 
 - Modify BreadCrum
