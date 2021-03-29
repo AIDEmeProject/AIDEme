@@ -1,11 +1,15 @@
+The issues and suggestions for frontend and backend are listed below.
+
 ## Progress bar
 
-- Data input → Attribute selection → Initial sampling → Algo selection → Exploration
+- Data input -> Attribute selection -> Initial sampling -> Algo selection -> Exploration
 - Allow user to go back ?
 
 ## Attribute selection
 
 - Load list of columns slowly if many columns
+- Makers overlap with axes: histogram plots and prediction plots
+- Histogram plots: the ticks (the distinct values of a categorical attribute) of the axis don’t match the corresponding markers for categorical attributes
 
 ## Initial sampling
 
@@ -25,7 +29,8 @@
 - Labeling: inform user when rows are exhausted
 
 - Model behavior: persist chosen variables in plots
-- Model behavior: should show original data points
+- Model behavior: should show original categorical values
+- Model behavior: MIN and MAX for categorical attributes ==> should show a list of distinct values
 - Model behavior: add help text to explain how point colors change ?
 
 - Change Auto-labeling to button

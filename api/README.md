@@ -126,7 +126,13 @@ git checkout web
 
 - If the master branch is active, install redis and run redis server before running the web server.
 
-- Set environment variables once
+- The virtual environment needs to be activated before running the web server.
+
+```
+source venv/bin/activate
+```
+
+- Set environment variables once (in a terminal window). In new terminal windows, set these environment variables again before running the web server.
 
 ```
 export FLASK_APP=src
@@ -162,12 +168,51 @@ cd api
 pytest path/to/test_module.py
 ```
 
+- Run trace tests (trace tests take long time and thus are run separately when needed)
+
+```
+cd api
+pytest tests/aidme/run_trace_dsm.py
+pytest tests/routes/run_trace.py
+```
+
 - Uninstall the current package installed in editable mode
 
 ```
 cd api
 pip uninstall aideme-web-api
 ```
+
+### Troubleshooting
+
+If the frontend does not behave as expected, here are places to see in order to debug:
+
+- The Console in the developer tools in the browser.
+
+- The Network tab in the developer tools in the browser which shows the details of the requests and responses.
+
+- The terminal window that runs the backend web server.
+
+Some potential errors:
+
+- When running
+
+```
+flask run -h localhost -p 7060
+```
+
+Error: Could not locate a Flask application. You did not provide the "FLASK_APP" environment variable, and a "wsgi.py" or "app.py" module was not found in the current directory.
+
+==> Should set environment variables before running the server
+
+```
+export FLASK_APP=src
+export FLASK_ENV=development
+```
+
+- The Console in the developer tools in the browser indicates a NETWORK ERROR, and the terminal window that runs the backend web server indicates some packages missing for import.
+
+==> Should activate the virtual environment where the required packages have been installed before running the server.
 
 ### Code editing
 
