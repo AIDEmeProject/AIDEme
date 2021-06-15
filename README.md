@@ -41,7 +41,7 @@ In trace sessions, the application allows user to:
 ## Links
 
 - AIDEme project website: [https://www.lix.polytechnique.fr/aideme](https://www.lix.polytechnique.fr/aideme)
-- AIDEme python package: [https://gitlab.inria.fr/ldipalma/aideme](https://gitlab.inria.fr/ldipalma/aideme)
+- AIDEme python package: [https://gitlab.inria.fr/aideme/aideme](https://gitlab.inria.fr/aideme/aideme)
 - AIDEplus (frontend + java backend + django backend): [https://gitlab.com/lcetinsoy/aideplus-mirror](https://gitlab.com/lcetinsoy/aideplus-mirror)
 
 ## Source code
