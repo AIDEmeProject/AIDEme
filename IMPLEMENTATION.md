@@ -3,7 +3,7 @@
 ### Repo
 
 - Separate repo for aideme-web-api
-- Install AIDEme python package: git+ssh://git@gitlab.inria.fr/ldipalma/aideme.git
+- Install AIDEme python package: git+ssh://git@gitlab.inria.fr/aideme/aideme.git
 
 ### Branches
 
