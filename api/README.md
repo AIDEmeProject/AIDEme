@@ -22,13 +22,13 @@ sourve venv/bin/activate
 Install aideme
 
 ```
-pip install git+ssh://git@gitlab.inria.fr/ldipalma/aideme.git
+pip install git+ssh://git@gitlab.inria.fr/aideme/aideme.git
 ```
 
 or
 
 ```
-pip install https://gitlab.inria.fr/ldipalma/aideme/-/archive/master/aideme-master.tar.gz
+pip install https://gitlab.inria.fr/aideme/aideme/-/archive/master/aideme-master.tar.gz
 ```
 
 Install other dependencies
@@ -55,7 +55,7 @@ pip freeze > requirements.txt
 
 ```
 pip uninstall aideme
-pip install git+ssh://git@gitlab.inria.fr/ldipalma/aideme.git
+pip install git+ssh://git@gitlab.inria.fr/aideme/aideme.git
 ```
 
 ### Setup redis
