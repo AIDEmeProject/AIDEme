@@ -20,38 +20,60 @@
 
 import React, { Component } from "react";
 
-import welcomeImg from "../resources/welcome.png";
+import MicroModal from "micromodal";
 
-class Welcome extends Component {
+class MicroModalComponent extends Component {
   render() {
     return (
-      <div className="row">
-        <div className="col col-lg-6 offset-lg-3">
-          <div className="center">
-            <h1>Welcome to AIDEme</h1>
-
-            <p>
-              <img src={welcomeImg} width="600" alt="AIDEme keywords" />
-            </p>
-            <p className="">
+      <div className="modal micromodal-slide" id="modal-1" aria-hidden="true">
+        <div className="modal__overlay" tabIndex="-1" data-micromodal-close>
+          <div
+            className="modal__container"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-1-title"
+          >
+            <header className="modal__header">
+              <h2 className="modal__title" id="modal-1-title">
+                {this.props.title}
+              </h2>
+            </header>
+            <main className="modal__content" id="modal-1-content">
+              <div>{this.props.children}</div>
+            </main>
+            <footer className="modal__footer">
               <button
-                className="btn btn-raised"
-                onClick={this.props.onTraceClick}
+                className="btn btn-primary"
+                onClick={this.props.onClose}
+                role="button"
+                type="button"
               >
-                Trace session
+                Close
               </button>
-              <button
-                className="btn btn-raised"
-                onClick={this.props.onInteractiveSessionClick}
-              >
-                Interactive session
-              </button>
-            </p>
+            </footer>
           </div>
         </div>
       </div>
     );
   }
+
+  componentDidMount() {
+    MicroModal.init({
+      onClose: () => {
+        MicroModal.close("modal-1");
+        this.props.onClose();
+      },
+    });
+    MicroModal.show("modal-1");
+  }
+
+  componentWillUnmount() {
+    MicroModal.close("modal-1");
+  }
 }
 
-export default Welcome;
+MicroModalComponent.defaultProps = {
+  title: "title",
+};
+
+export default MicroModalComponent;

@@ -18,82 +18,73 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
-import GroupedPointTableHead from './GroupedPointTableHead'
+import React, { Component } from "react";
 
+import LabeledPointsCount from "../LabeledPointsCount";
 
-class DataPoints extends Component{
+import Dataset from "../../../model/Dataset";
 
-    constructor(props){
-        super(props)        
-    }
-  
-    render(){         
-        const dataset = this.props.dataset
-        
-        return (
+class DataPoints extends Component {
+  render() {
+    const dataset = this.props.dataset;
 
-            <div>
-                
-                <h3>
-                    Labeled Points
-                </h3>
-            
-                <table className="table-label">
-                
-                    <GroupedPointTableHead 
-                        groups={this.props.groups}
-                    />  
+    var headerCells = [];
 
-                    <tbody>                
-                        {
-                            this.props.labeledPoints.map((point, i) => {
-                                                                
-                                const data = dataset.get_selected_columns_point(point.id)
-                                
-                                return (
-                                    <tr 
-                                        key={i}
-                                        className="variable-group">
+    this.props.groups.forEach((g, i) => {
+      const columnNames = g.map((v) => v.name);
+      headerCells.push(
+        <th key={i} colSpan={g.length}>
+          {columnNames.join(", ")}
+        </th>,
+        <th key={"sublabel-" + i}>Sublabel</th>
+      );
+    });
 
-                                        {
-                                            this.props.groups.map((g, iGroup) => {
-                                                
-                                                var pointIds = g.map(e => e.realId)    
-                                                
-                                                var dataAsGroups = []
+    headerCells.push(<th className="label-col">Label</th>);
 
-                                                pointIds.forEach(realId => {
-                                                    var value = data[realId]
-                                                
-                                                    dataAsGroups.push(value)
-                                                })
-                                                                                                                                
-                                                var values = dataAsGroups.join(", ")
-                                                
-                                                return (
-                                                    <td 
-                                                        colSpan={g.length}
-                                                        key={iGroup}
-                                                    >
-                                                        {values} 
-                                                    </td>
-                                                )
-                                            })
-                                        }       
+    return (
+      <div>
+        <h3>Labeled Points</h3>
 
-                                        <td>
-                                            {point.label}    
-                                        </td>                                 
-                                    </tr>
-                                )
-                            })
-                        }
-                    </tbody>
-                </table>
-            </div>
-        )     
-    }
+        <LabeledPointsCount points={this.props.labeledPoints} />
+
+        <table className="table-label">
+          <thead>
+            <tr>{headerCells}</tr>
+          </thead>
+
+          <tbody>
+            {this.props.labeledPoints.map((point, pointIdx) => {
+              const row = dataset.get_selected_columns_point(point.id);
+
+              var rowCells = [];
+
+              this.props.groups.forEach((group, iGroup) => {
+                const values = group.map((variable) =>
+                  Dataset.displayValue(row[variable.realId])
+                );
+
+                rowCells.push(
+                  <td colSpan={group.length} key={iGroup}>
+                    {values.join(",  ")}
+                  </td>,
+                  <td key={"label-" + iGroup}>{point.labels[iGroup]}</td>
+                );
+              });
+
+              rowCells.push(<td>{point.label}</td>);
+
+              return (
+                <tr key={pointIdx} className="variable-group">
+                  {rowCells}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 }
 
-export default DataPoints
+export default DataPoints;

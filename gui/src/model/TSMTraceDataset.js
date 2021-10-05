@@ -18,45 +18,39 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import * as d3 from 'd3'
+import * as d3 from "d3";
 
-import Dataset from './Dataset'
+import Dataset from "./Dataset";
 
-class TSMTraceDataset extends Dataset{
+class TSMTraceDataset extends Dataset {
+  static buildFromLoadedInput(fileContent, isCSV) {
+    var csv = isCSV ? d3.csvParse(fileContent) : d3.tsvParse(fileContent);
+    var dataset = new TSMTraceDataset(csv);
 
-    constructor(d3dataset){
-        super(d3dataset)
-    }
+    dataset.parse_trace();
+    return dataset;
+  }
 
-    static buildFromLoadedInput(fileContent, isCSV){
-        
-        var csv = isCSV ? d3.csvParse(fileContent) : d3.tsvParse(fileContent)
-        var dataset = new TSMTraceDataset(csv)
-        
-        dataset.parse_trace()
-        return dataset
-    }
+  get_point(id) {
+    return {
+      id: this.point_indices[id],
+      labels: this.labels[id],
+    };
+  }
 
-    get_point(id){
-        return {
-            id: this.point_indices[id],
-            labels: this.labels[id]
-        }
-    }
+  parse_trace() {
+    this.labels = this.get_raw_col_by_name("labels").flatMap((s) => {
+      return JSON.parse(s);
+      //return parseFloat(e.replace(/[\[\]']/g,'' ))
+    });
 
-    parse_trace(){
-
-        this.labels = this.get_raw_col_by_name('labels').flatMap(s => {
-            
-            return JSON.parse(s)
-            //return parseFloat(e.replace(/[\[\]']/g,'' ))                
-        })
-        
-        this.point_indices = this.get_raw_col_by_name('labeled_indexes').flatMap(e => {
-            return JSON.parse(e)
-            //return parseFloat(e.replace(/[\[\]']/g,'' ))
-        })    
-    }
+    this.point_indices = this.get_raw_col_by_name("labeled_indexes").flatMap(
+      (e) => {
+        return JSON.parse(e);
+        //return parseFloat(e.replace(/[\[\]']/g,'' ))
+      }
+    );
+  }
 }
 
-export default TSMTraceDataset
+export default TSMTraceDataset;

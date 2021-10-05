@@ -18,16 +18,25 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-function postFile(){
+import { backend } from "../constants/constants";
 
+import $ from "jquery";
 
-    var formData = new FormData();
-    var imagefile = document.querySelector('#file');
-    formData.append("image", imagefile.files[0]);
-    axios.post('upload_file', formData, {
-         headers: {
-           'Content-Type': 'multipart/form-data'
-                              }
-    })
+function fetchFilteredPoints(labeledPoints, filters, onSuccess) {
+  $.ajax({
+    type: "POST",
+    dataType: "JSON",
+    url: backend + "/get-points-by-filtering",
+    xhrFields: {
+      withCredentials: true,
+    },
+    data: {
+      labeledPoints: JSON.stringify(labeledPoints),
+      filters: JSON.stringify(filters),
+    },
 
+    success: onSuccess,
+  });
 }
+
+export default fetchFilteredPoints;

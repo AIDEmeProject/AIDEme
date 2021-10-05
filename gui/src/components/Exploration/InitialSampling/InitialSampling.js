@@ -18,192 +18,293 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
+import React, { Component } from "react";
 
-import $ from 'jquery'
-import {backend, webplatformApi} from '../../../constants/constants'
+import FilteringPoints from "./FilteringPoints";
+import PointLabelisation from "../../PointLabelisation";
 
-import SpecificPointToLabel from './SpecificPointToLabel'
-import FakePointSampling from './FakePointSampling'
-import FilteringPoints from './FilteringPoints'
+import explorationSendLabeledPoint from "../../../actions/explorationSendLabeledPoint";
+import fetchFilteredPoints from "../../../actions/fetchFilteredPoints";
 
-import PointLabelisation from '../../PointLabelisation'
-import sendFakePoint from '../../../actions/sendFakePoint'
+import robot from "../../../resources/robot.png";
 
-import robot from '../../../resources/robot.png'
+const RANDOM = "random";
+const FILTERED = "filtered";
 
-class InitialSampling extends Component{
+class InitialSampling extends Component {
+  constructor(props) {
+    super(props);
 
-    constructor(props){
-        
-        super(props)       
+    this.state = {
+      showRandomSampling: false,
+      showFilterBasedSampling: false,
 
-        this.state = {
-            showLabeling: false,
-            showFilterBasedSampling: false
-        }
-    }
-    
-    render(){
-        
-        return (
-            <div className="card">
-                <div>
-                    <div className="row">
-                        <div className="col col-lg-8 offset-lg-2">
+      randomPointsToLabel: [...this.props.pointsToLabel],
+      filteredPointsToLabel: [],
+      labeledPoints: [],
+      allLabeledInitialPoints: [],
 
+      filters: this.props.chosenColumns.map((e) => ({
+        columnName: e.name,
+        type: e.type,
+      })),
 
-                        <p className="card">   
+      hasYes: false,
+      hasNo: false,
+    };
+  }
 
-                            <span className="chatbot-talk">
-                                <img src={robot} width="70" />
-                                <q>
-                                    The first phase of labeling continues until we obtain 
-                                    a positive example and a negative example. <br />
+  render() {
+    return (
+      <div className="card">
+        <div>
+          <div className="row">
+            <div className="col col-lg-8 offset-lg-2">
+              <h3>Initial sampling</h3>
 
-                                    To get the initial samples, would you like to go through initial sampling or attribute filtering
-                                </q>
-                            </span>
-                        </p>
+              <p className="card">
+                <span className="chatbot-talk">
+                  <img src={robot} width="50" alt="robot" />
+                  <q>
+                    The first phase of labeling continues until we obtain a
+                    positive example and a negative example. <br />
+                    To get the initial samples, would you like to go through
+                    random sampling or attribute filtering?
+                  </q>
+                </span>
+              </p>
 
-                      
-                            
-                        <ul className="nav nav-tabs bg-primary">
-                                <li className="nav-item">
-                                    <a 
-                                    className="nav-link" 
-                                    href="#"
-                                    onClick={() => this.setState({
-                                        showLabeling: true,
-                                        showFakePointSampling: false,
-                                        showFilterBasedSampling: false
-                                    })}
-                                    >
-                                        Initial sampling
-                                    </a>
-                                </li>
-
-                                <li className="nav-item">
-                                    <a 
-                                    className="nav-link" 
-                                    href="#"
-                                    onClick={() => this.setState({
-                                        showLabeling: false,
-                                        showFakePointSampling: false,
-                                        showFilterBasedSampling: true
-                                    })}
-                                    >
-                                        Faceted search
-                                    </a>
-                                </li>    
-
-                                { 
-                                    false && 
-                                    <li className="nav-item">
-                                        <a 
-                                        className="nav-link active" 
-                                        href="#"
-                                        onClick={() => this.setState({
-                                            showLabeling: false,
-                                            showFakePointSampling: false
-                                        })}
-                                        >
-                                            Fake point initial sampling
-                                        </a>
-                                    </li>      
-                                }               
-                            </ul>
-                        
-                        {
-                            //this.state.showLabeling && 
-                            false &&
-                            
-                            <SpecificPointToLabel 
-                                onNewPointsToLabel={this.props.onNewPointsToLabel}                        
-                            />
-                        }
-                    
-                    </div>
-                    </div>
-                        
-
-                    {
-                        this.state.showLabeling && 
-
-                        <div>
-                                            
-                            <PointLabelisation
-                                {...this.props}   
-                                {...this.state}
-                            />
-                        </div>
+              <ul className="nav nav-tabs bg-light">
+                <li className="nav-item">
+                  <a
+                    className={
+                      this.state.showRandomSampling
+                        ? "nav-link active"
+                        : "nav-link"
                     }
-                 
-                    {
-                        this.state.showFilterBasedSampling && 
-                        <div className="row">
-                            <div className="col col-lg-8 offset-lg-2">
-                                <FilteringPoints
-                                    chosenVariables={this.buildChosenVariableForFiltering()}
-                                    dataset={this.props.dataset}
-                                    onPositiveLabel={this.props.onPositiveLabel}
-                                    onNegativeLabel={this.props.onNegativeLabel}
-                                />
-                            </div>
-                        </div>
+                    href="javascript:void(0)"
+                    onClick={this.onRandomSamplingClicked.bind(this)}
+                  >
+                    Random sampling
+                  </a>
+                </li>
 
+                <li className="nav-item">
+                  <a
+                    className={
+                      this.state.showFilterBasedSampling
+                        ? "nav-link active"
+                        : "nav-link"
                     }
-
-                    {
-                        this.state.showFakePointSampling && 
-
-                        <div>
-                            <FakePointSampling 
-                                pointToLabel={this.props.pointsToLabel[0].data}                            
-                                onFakePointValidation={this.fakePointWasValidated.bind(this)}
-                                availableVariables={this.props.availableVariables}
-                            />
-                       </div>
-               
+                    href="javascript:void(0)"
+                    onClick={() =>
+                      this.setState({
+                        showRandomSampling: false,
+                        showFilterBasedSampling: true,
+                      })
                     }
-                </div>                                                  
+                  >
+                    Faceted search
+                  </a>
+                </li>
+              </ul>
             </div>
-        )
+          </div>
+
+          {this.state.showRandomSampling && (
+            <div>
+              <PointLabelisation
+                pointsToLabel={this.state.randomPointsToLabel}
+                chosenColumns={this.props.chosenColumns}
+                dataset={this.props.dataset}
+                onPositiveLabel={this.onPositiveRandomPoint.bind(this)}
+                onNegativeLabel={this.onNegativeRandomPoint.bind(this)}
+              />
+            </div>
+          )}
+
+          {this.state.showFilterBasedSampling && (
+            <div className="row">
+              <div className="col col-lg-8 offset-lg-2">
+                <FilteringPoints
+                  pointsToLabel={this.state.filteredPointsToLabel}
+                  chosenColumns={this.props.chosenColumns}
+                  dataset={this.props.dataset}
+                  filters={this.state.filters}
+                  onPositiveLabel={this.onPositiveFilteredPoint.bind(this)}
+                  onNegativeLabel={this.onNegativeFilteredPoint.bind(this)}
+                  getFilteredPoints={this.getFilteredPoints.bind(this)}
+                  onFilterChanged={this.onFilterChanged.bind(this)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  onRandomSamplingClicked() {
+    this.setState({
+      showRandomSampling: true,
+      showFilterBasedSampling: false,
+    });
+
+    if (this.state.randomPointsToLabel.length === 0) this.getRandomPoints();
+  }
+
+  onPositiveRandomPoint(e) {
+    this.onPositiveLabel(e, RANDOM);
+  }
+
+  onNegativeRandomPoint(e) {
+    this.onNegativeLabel(e, RANDOM);
+  }
+
+  onPositiveFilteredPoint(e) {
+    this.onPositiveLabel(e, FILTERED);
+  }
+
+  onNegativeFilteredPoint(e) {
+    this.onNegativeLabel(e, FILTERED);
+  }
+
+  onPositiveLabel(e, pointType) {
+    var dataIndex = parseInt(e.target.dataset.key);
+    this.dataWasLabeled(dataIndex, 1, pointType);
+  }
+
+  onNegativeLabel(e, pointType) {
+    var dataIndex = parseInt(e.target.dataset.key);
+    this.dataWasLabeled(dataIndex, 0, pointType);
+  }
+
+  dataWasLabeled(dataIndex, label, pointType) {
+    var newLabeledPoint;
+    if (pointType === RANDOM) {
+      newLabeledPoint = {
+        ...this.state.randomPointsToLabel[dataIndex],
+        label,
+      };
+    } else {
+      newLabeledPoint = {
+        ...this.state.filteredPointsToLabel[dataIndex],
+        label,
+      };
     }
 
-    buildChosenVariableForFiltering(){
-        
-        var chosenVariables = this.props.chosenColumns
+    const newLabeledPoints = [...this.state.labeledPoints, newLabeledPoint];
 
-        chosenVariables = this.props.chosenColumns.map(e => {
-            const dataset = this.props.dataset
+    const newRandomPointsToLabel = this.removeLabeledPoint(
+      newLabeledPoint,
+      this.state.randomPointsToLabel
+    );
+    const newFilteredPointsToLabel = this.removeLabeledPoint(
+      newLabeledPoint,
+      this.state.filteredPointsToLabel
+    );
 
-            if (e.type == "numerical"){
-                
-                //compute min and max
-                var min = dataset.min(e.name)
-                var max = dataset.max(e.name)
-                return Object.assign(e, {min:min, max:max})
+    const isYes = label === 1;
 
-            }
-            else{
-                var uniqueValues = Object.entries(dataset.uniqueValues(e.name)).map (e => e[0])
-                return Object.assign(e, {values: uniqueValues})
-            }
+    this.setState(
+      {
+        allLabeledInitialPoints: [
+          ...this.state.allLabeledInitialPoints,
+          newLabeledPoint,
+        ],
+        labeledPoints: newLabeledPoints,
 
-        })
+        randomPointsToLabel: newRandomPointsToLabel,
+        filteredPointsToLabel: newFilteredPointsToLabel,
 
-        return chosenVariables
-    }
+        hasYes: this.state.hasYes || isYes,
+        hasNo: this.state.hasNo || !isYes,
+      },
+      () => {
+        this.getNextPointsToLabel(pointType);
+      }
+    );
+  }
 
-    fakePointWasValidated(fakePointData){
+  removeLabeledPoint(labeledPoint, pointsToLabel) {
+    const labeledPointIdx = pointsToLabel.findIndex(
+      (point) => point.id === labeledPoint.id
+    );
+    var newPointsToLabel = [...pointsToLabel];
+    if (labeledPointIdx !== -1) newPointsToLabel.splice(labeledPointIdx, 1);
+    return newPointsToLabel;
+  }
 
-        const fakePoint = {
-            'data': fakePointData,
-            'label':1
+  getNextPointsToLabel(pointType) {
+    if (this.state.hasYes && this.state.hasNo) {
+      explorationSendLabeledPoint(
+        {
+          labeledPoints: this.state.labeledPoints,
+        },
+        this.props.tokens,
+        (response) => {
+          this.props.hasPositiveAndNegativeLabels(
+            this.state.allLabeledInitialPoints,
+            this.parseReceivedPoints(response)
+          );
         }
-        sendFakePoint(fakePoint, this.props.fakePointWasValidated)
+      );
+
+      return;
     }
+
+    if (pointType === RANDOM && this.state.randomPointsToLabel.length === 0) {
+      this.getRandomPoints();
+    }
+  }
+
+  getRandomPoints() {
+    explorationSendLabeledPoint(
+      {
+        labeledPoints: this.state.labeledPoints,
+      },
+      this.props.tokens,
+      (response) => {
+        this.setState({
+          labeledPoints: [],
+          randomPointsToLabel: [
+            ...this.state.randomPointsToLabel,
+            ...this.parseReceivedPoints(response),
+          ],
+        });
+      }
+    );
+  }
+
+  getFilteredPoints() {
+    fetchFilteredPoints(
+      this.state.labeledPoints,
+      this.state.filters.map((f) => {
+        const { type, ...others } = f;
+        return others;
+      }),
+      this.onFilteredPointsReceived.bind(this)
+    );
+  }
+
+  onFilteredPointsReceived(points) {
+    if (points.length === 0) alert("No points satisfy the criteria.");
+
+    this.setState({
+      labeledPoints: [],
+      filteredPointsToLabel: this.parseReceivedPoints(points),
+    });
+  }
+
+  parseReceivedPoints(points) {
+    return points.map((id) => ({ id }));
+  }
+
+  onFilterChanged(iFilter, change) {
+    var newFilters = [...this.state.filters];
+    Object.assign(newFilters[iFilter], change);
+    this.setState({ filters: newFilters });
+  }
 }
 
-export default InitialSampling
+export default InitialSampling;

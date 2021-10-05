@@ -18,526 +18,285 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
+import React, { Component } from "react";
 
-import $ from "jquery";
-import {backend, webplatformApi} from '../../constants/constants'
+import PointLabelisation from "../PointLabelisation";
+import DataPoints from "../DataPoints";
+import LabelInfos from "../visualisation/LabelInfos";
+import ModelBehaviorControls from "../visualisation/ModelBehaviorControls";
+import ModelBehavior from "../visualisation/ModelBehavior";
+import AlgorithmName from "../AlgorithmName";
 
-import ModelVisualization from '../visualisation/ModelVisualization'
-import ModelBehaviorControls from '../visualisation/ModelBehaviorControls'
+import explorationSendLabeledPoint from "../../actions/explorationSendLabeledPoint";
+import getModelPredictionsOverGridPoints from "../../actions/getModelPredictionsOverGridPoints";
+import getWholedatasetLabeled from "../../actions/getWholeLabeledDataset";
+import wholeDatasetLabelizationWasAsked from "../../actions/statisticCollection/wholeDatasetLabelizationWasAsked";
 
-import PointLabelisation from '../PointLabelisation'
-import InitialSampling from './InitialSampling/InitialSampling'
-import ModelBehavior from '../visualisation/ModelBehavior'
-import LabelInfos from '../visualisation/LabelInfos'
+class Exploration extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      showLabelView: true,
+      showLabelHistory: false,
+      showModelBehavior: false,
 
-import DataPoints from '../DataPoints'
+      labeledPoints: [],
+      pointsToLabel: [...this.props.pointsToLabel],
+      allLabeledPoints: [...this.props.allLabeledPoints],
 
-import wholeDatasetLabelizationWasAsked from '../../actions/statisticCollection/wholeDatasetLabelizationWasAsked'
-import explorationSendLabeledPoint from '../../actions/explorationSendLabeledPoint'
-import getWholedatasetLabeled from '../../actions/getWholeLabeledDataset'
-import getDecisionBoundaryData from '../../actions/getDecisionBoundaryData'
+      fakePointGrid: [],
+      categories: {},
+      modelPredictionHistory: [],
+      iteration: 0,
+      nIteration: 0,
+    };
+  }
 
-import getGridPoints from '../../actions/getGridPoints'
-import getModelPredictionsOverGridPoints from '../../actions/getModelPredictionsOverGridPoints'
+  componentDidMount() {
+    this.getFakePointGrid();
+    this.getModelBehaviorData();
+  }
 
+  render() {
+    return (
+      <div>
+        <ul className="nav nav-tabs bg-primary">
+          <li className="nav-item">
+            <a
+              className={
+                this.state.showLabelView ? "nav-link active" : "nav-link"
+              }
+              href="javascript:void(0)"
+              onClick={() =>
+                this.setState({
+                  showLabelView: true,
+                  showLabelHistory: false,
+                  showModelBehavior: false,
+                })
+              }
+            >
+              Labeling
+            </a>
+          </li>
 
+          <li className="nav-item">
+            <a
+              className={
+                this.state.showLabelHistory ? "nav-link active" : "nav-link"
+              }
+              href="javascript:void(0)"
+              onClick={() =>
+                this.setState({
+                  showLabelView: false,
+                  showLabelHistory: true,
+                  showModelBehavior: false,
+                })
+              }
+            >
+              History
+            </a>
+          </li>
 
-class Exploration extends Component{
+          <li className="nav-item">
+            <a
+              className={
+                this.state.showModelBehavior ? "nav-link active" : "nav-link"
+              }
+              href="javascript:void(0)"
+              onClick={this.onModelBehaviorClick.bind(this)}
+            >
+              Model Behavior
+            </a>
+          </li>
 
-    render(){
-                   
-        const iteration = this.getIteration()
-        if (this.state.initialLabelingSession){
-            return (
-                <InitialSampling 
-                    pointsToLabel={this.state.pointsToLabel}
-                    chosenColumns={this.props.chosenColumns}
-                    availableVariables={this.props.availableVariables}
+          <li className="nav-item">
+            <a
+              className="nav-link"
+              onClick={this.onLabelWholeDatasetClick.bind(this)}
+            >
+              Auto-labeling
+            </a>
+          </li>
+        </ul>
 
-                    onPositiveLabel={this.onPositiveLabel.bind(this)}
-                    onNegativeLabel={this.onNegativeLabel.bind(this)}
-                    onNewPointsToLabel={this.onNewPointsToLabel.bind(this)}
-                    dataset={this.props.dataset}
-                />)
-        }
-        
-        return (
+        {this.state.showLabelView && (
+          <div>
+            <h3>Exploration</h3>
 
-            <div>
-               <div className="row">
-                    <div className="col col-lg-8 offset-lg-2">                            
-                        <ul className="nav nav-tabs bg-primary">
-                        
-                            <li className="nav-item">
-                                <a 
-                                    className={this.state.showLabelView ? "nav-link active": "nav-link"} 
-                                    
-                                    onClick={() => this.setState({
-                                        'showModelVisualisation': false,
-                                        'showLabelView': true,
-                                        'showHeatmap': false,
-                                        'showLabelHistory': false,
-                                        'showModelBehavior': false
-                                        })}
-                                >
-                                    Labeling
-                                </a>
-                            </li>
-
-                            <li className="nav-item">
-                                <a 
-                                    className={this.state.showLabelHistory ? "nav-link active": "nav-link"} 
-                                    
-                                    onClick={() => this.setState({
-                                        'showModelVisualisation': false, 
-                                        'showLabelView': false, 
-                                        'showHeatmap': false,
-                                        'showLabelHistory': true,
-                                        'showModelBehavior': false
-                                    })}
-                                >
-                                    History
-                                </a>
-                            </li>         
-
-                            <li className="nav-item">
-                                <a 
-                                    className={this.state.showModelVisualisation ? "nav-link active": "nav-link"} 
-                                    
-                                    onClick={this.onModelBehaviorClick.bind(this)}
-                                >
-                                    Model Behavior
-                                </a>
-                            </li>       
-
-                            { false && 
-                            <li className="nav-item">
-                                <a 
-                                    className={this.state.showModelVisualisation ? "nav-link active": "nav-link"} 
-                                    
-                                    onClick={() => this.setState({
-                                        'showModelVisualisation': true, 
-                                        'showLabelView': false,  
-                                        'showHeatmap': false,
-                                        'showLabelHistory': false,
-                                        'showModelBehavior': false
-                                    })}
-                                >
-                                    Model Performance
-                                </a>
-                            </li>       
-                            }
-                            <li className="nav-item">
-                                <a
-                                    className="nav-link"
-                                    onClick={this.onLabelWholeDatasetClick.bind(this)}
-                                >                        
-                                    Auto-labeling           
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-                                                                                     
-                { 
-                    this.state.showLabelView && 
-
-                        <div className="row">
-                            <div className="col col-lg-12">
-                            <PointLabelisation                                                           
-                                chosenColumns={this.props.chosenColumns}
-                                pointsToLabel={this.state.pointsToLabel}
-                                onPositiveLabel={this.onPositiveLabel.bind(this)}
-                                onNegativeLabel={this.onNegativeLabel.bind(this)}
-                                dataset={this.props.dataset}
-                            />
-                        </div>
-                        </div>
-                }
-
-                { 
-                    this.state.showModelBehavior && 
-                    <div className="row">
-
-                        <div className="col col-lg-4">
-
-                            <ModelBehaviorControls         
-                                iteration={iteration}          
-                                nIteration={this.state.nIteration}
-                                onPreviousIteration={this.onPreviousIteration.bind(this)}
-                                onNextIteration={this.onNextIteration.bind(this)}
-                            />
-
-                            <LabelInfos
-                                iteration={this.state.iteration}
-                                labeledPoints={this.state.allLabeledPoints}                                            
-                            />
-
-                        </div>
-                        
-                        <div className="col col-lg-8">
-                            <ModelBehavior   
-                                iteration={iteration}                     
-                                labeledPoints={this.state.allLabeledPoints}
-                                datasetInfos={this.props.datasetInfos}
-                                availableVariables={this.props.chosenColumns}
-                                projectionHistory={this.state.projectionHistory}
-                                fakePointGrid={this.state.fakePointGrid}
-                                modelPredictionHistory={this.state.modelPredictionHistory}
-                                hasTSM={false}
-                                plotProjection={false}
-                            />
-                        </div>
-                    </div>
-                }
-
-                {
-                    //this.state.showModelVisualisation && 
-                    false &&                  
-                    <ModelVisualization 
-                        {...this.props}
-                        {...this.state}
-                    />
-                }
-
-                {
-                    this.state.showLabelHistory && 
-                        <div className="row">
-                            <div className="col col-lg-8 offset-lg-2">
-                                <DataPoints                             
-                                    availableVariables={this.props.finalVariables}
-                                    points={this.state.allLabeledPoints}
-                                    chosenColumns={this.props.chosenColumns}
-                                    show={true}
-                                    normal={true}
-                                    dataset={this.props.dataset}
-                                />
-                            </div>
-                        </div>
-                }                
+            <div className="row">
+              <div className="col col-lg-12">
+                <PointLabelisation
+                  chosenColumns={this.props.chosenColumns}
+                  pointsToLabel={this.state.pointsToLabel}
+                  onPositiveLabel={this.onPositiveLabel.bind(this)}
+                  onNegativeLabel={this.onNegativeLabel.bind(this)}
+                  dataset={this.props.dataset}
+                />
+              </div>
             </div>
-        )
+          </div>
+        )}
+
+        {this.state.showModelBehavior && (
+          <div className="row">
+            <div className="col col-lg-4">
+              <ModelBehaviorControls
+                iteration={this.state.iteration}
+                nIteration={this.state.nIteration}
+                onPreviousIteration={this.onPreviousIteration.bind(this)}
+                onNextIteration={this.onNextIteration.bind(this)}
+              />
+
+              <LabelInfos
+                iteration={this.state.iteration}
+                labeledPoints={this.state.allLabeledPoints}
+              />
+            </div>
+
+            <div className="col col-lg-8">
+              <AlgorithmName algorithm={this.props.algorithm} />
+              <ModelBehavior
+                iteration={this.state.iteration}
+                labeledPoints={this.state.allLabeledPoints}
+                availableVariables={this.props.chosenColumns}
+                fakePointGrid={this.state.fakePointGrid}
+                categories={this.state.categories}
+                modelPredictionHistory={this.state.modelPredictionHistory}
+                realDataset={true}
+                hasTSM={false}
+                plotProjection={false}
+              />
+            </div>
+          </div>
+        )}
+
+        {this.state.showLabelHistory && (
+          <div className="row">
+            <div className="col col-lg-8 offset-lg-2">
+              <DataPoints
+                availableVariables={this.props.finalVariables}
+                points={this.state.allLabeledPoints.flat()}
+                chosenColumns={this.props.chosenColumns}
+                show={true}
+                normal={true}
+                dataset={this.props.dataset}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  onPreviousIteration() {
+    this.setState({
+      iteration: Math.max(this.state.iteration - 1, 0),
+    });
+  }
+
+  onNextIteration() {
+    this.setState({
+      iteration: Math.min(this.state.iteration + 1, this.state.nIteration - 1),
+    });
+  }
+
+  onModelBehaviorClick(e) {
+    const hasBehaviorData = this.state.modelPredictionHistory.length > 0;
+
+    if (hasBehaviorData) {
+      this.setState({
+        showLabelView: false,
+        showLabelHistory: false,
+        showModelBehavior: true,
+      });
+    } else {
+      alert("Please wait for computation to finish.");
     }
+  }
 
-    constructor(props){
-        
-        super(props)
-        this.state = {
-            showModelVisualisation: false,
-            showLabelView: true,
-            showLabelHistory: false,
-            showModelBehavior: false,
-            labeledPoints: [],
-            pointsToLabel: this.props.pointsToLabel.map(e => e),
-            allLabeledPoints: [],
-            initialLabelingSession: true,            
-            fakePointGridabelHistory: [],
-            projectionHistory: [],
-            fakePointGrid: [],
-            modelPredictionHistory: [],
-            iteration: 0,
-            nIteration: 0
-        }
-    }
+  onPositiveLabel(e) {
+    var dataIndex = parseInt(e.target.dataset.key);
+    this.dataWasLabeled(dataIndex, 1);
+  }
 
-    onNewPointsToLabel(points){
-        
-        var pointsToLabel = this.state.pointsToLabel.map(e=>e)
+  onNegativeLabel(e) {
+    var dataIndex = parseInt(e.target.dataset.key);
+    this.dataWasLabeled(dataIndex, 0);
+  }
 
-        var receivedPoints = points.map(e => {
-            return {
-                id: e.id,
-                data: e.data.array
-            }
-        })
+  dataWasLabeled(dataIndex, label) {
+    const newLabeledPoint = { ...this.state.pointsToLabel[dataIndex], label };
+    const newLabeledPoints = [...this.state.labeledPoints, newLabeledPoint];
 
-        for (var point of receivedPoints){
-            pointsToLabel.push(point)
-        }
+    var newPointsToLabel = [...this.state.pointsToLabel];
+    newPointsToLabel.splice(dataIndex, 1);
 
+    this.setState({
+      allLabeledPoints: [...this.state.allLabeledPoints, [newLabeledPoint]],
+      labeledPoints: newLabeledPoints,
+      pointsToLabel: newPointsToLabel,
+    });
+
+    explorationSendLabeledPoint(
+      {
+        labeledPoints: newLabeledPoints,
+      },
+      this.props.tokens,
+      (response) => {
         this.setState({
-            pointsToLabel: pointsToLabel
-        })       
-    }
+          labeledPoints: [],
+          pointsToLabel: [
+            ...this.state.pointsToLabel,
+            ...this.parseReceivedPoints(response),
+          ],
+        });
 
-    getNumberOfIterations(){
-        return this.state.nIteration
-    }
+        this.getModelBehaviorData();
+      }
+    );
+  }
 
-    getIteration(){
-        return this.state.iteration
-    }     
-    
-    onPreviousIteration(){
+  parseReceivedPoints(points) {
+    return points.map((id) => ({ id }));
+  }
 
-        var iteration = this.getIteration() - 1
-        this.setState({
-            iteration: Math.max(iteration, 0)
-        })    
-    }
+  getModelBehaviorData() {
+    getModelPredictionsOverGridPoints((predictedLabels) => {
+      this.setState({
+        nIteration: this.state.nIteration + 1,
+        modelPredictionHistory: [
+          ...this.state.modelPredictionHistory,
+          predictedLabels,
+        ],
+      });
+    });
+  }
 
-    onNextIteration(){
+  getFakePointGrid() {
+    const chosenColumnNames = this.props.chosenColumns.map((e) => e["name"]);
+    const grid = this.props.dataset.get_parsed_columns_by_names(
+      chosenColumnNames
+    );
+    const categories = this.props.dataset.getParsedCategoriesByNames(
+      chosenColumnNames
+    );
+    this.setState({
+      fakePointGrid: grid,
+      categories,
+    });
+  }
 
-        const nIteration = this.getNumberOfIterations()
-        var iteration = this.getIteration() + 1
+  onLabelWholeDatasetClick(e) {
+    e.preventDefault();
 
-        this.setState({
-            iteration: Math.min(iteration, nIteration - 1)
-        })        
-    }
+    getWholedatasetLabeled();
 
-
-    onModelBehaviorClick(e){
-        
-
-        const hasBehaviorData = this.state.modelPredictionHistory.length > 0
-
-
-        if (hasBehaviorData){    
-            this.setState({
-                'showModelVisualisation': false, 
-                'showLabelView': false,  
-                'showHeatmap': false,
-                'showLabelHistory': false,
-                'showModelBehavior': true
-            })
-        }
-        else{
-            alert('Please label at least one more point or wait for computation to finish')
-        }
-    }
-
-    onPositiveLabel(e){
-        
-        var dataIndex = parseInt(e.target.dataset.key)
-        this.dataWasLabeled(dataIndex, 1)
-    }
-
-    onNegativeLabel(e){
-        var dataIndex = parseInt(e.target.dataset.key)
-        this.dataWasLabeled(dataIndex, 0)                      
-    }
-
-    componentDidUpdate(){
-        //console.log(this.state)
-        //console.log(this.state.allLabeledPoints)
-    }
-
-    dataWasLabeled(dataIndex, label){
-        
-        var tokens = this.props.tokens
-        var labeledPoint = this.state.pointsToLabel[dataIndex]
-        
-        labeledPoint.label = label
-
-        var allLabeledPoints = this.state.allLabeledPoints
-        allLabeledPoints.push(labeledPoint)
-
-        var labeledPoints = this.state.labeledPoints.map(e => e)
-        labeledPoints.push(labeledPoint)
-
-        var pointsToLabel = this.state.pointsToLabel.map(e => e)
-        
-        pointsToLabel.splice(dataIndex, 1)
-        
-        this.setState({
-            allLabeledPoints: allLabeledPoints,
-            pointsToLabel: pointsToLabel,
-            labeledPoints: labeledPoints
-        })
-        
-        if (this.state.initialLabelingSession){
-
-            if (label === 1){
-                this.setState({
-                    hasYes: true
-                }, () => {
-                    this.labelForInitialSession(labeledPoints, pointsToLabel)
-                })
-            }
-            else{
-                this.setState({
-                    hasNo: true
-                }, () => {
-                    this.labelForInitialSession(labeledPoints, pointsToLabel)
-                })
-            }                        
-        }
-        else{     
-            this.setState({
-                labeledPoints: []
-            }, () =>{  
-                explorationSendLabeledPoint({
-                    data: labeledPoints,
-                }, tokens, response => {
-                    
-                    this.onNewPointsToLabel(response)
-                    
-                    this.getModelBehaviorData()
-                })
-            })
-        }
-    }
-
-    
-    getModelBehaviorData(){
-
-        this.setState({
-            isFetchingPrediction: true,
-            isFetchingProjection: true,
-            nIteration: this.state.nIteration + 1
-        }, this._getModelBehaviorData.bind(this))    
-                
-    }
-
-    _getModelBehaviorData(){
-
-        if (this.props.useRealData){
-            const usedColumnNames = this.props.chosenColumns.map(e => e['name'])            
-            var grid = this.props.dataset.get_parsed_columns_by_names(usedColumnNames)
-            this.setState({
-                fakePointGrid: grid
-            })
-        }
-        else{
-            if ( this.state.fakePointGrid.length === 0){
-                getGridPoints(points => {                                                
-                    this.setState({
-                        fakePointGrid: points
-                    })
-
-                })
-            }
-        }
-
-        if ( ! this.state.initialLabelingSession){
-
-            //getDecisionBoundaryData(this.projectionDataWasReceived.bind(this))
-            getModelPredictionsOverGridPoints(predictedLabels => {
-                                                            
-                var history = this.state.modelPredictionHistory
-                history.push(predictedLabels)                
-                console.log(history)
-                this.setState({
-                    modelPredictionHistory: history,
-                    isFetchingProjection: false
-                })
-            }, false)
-        }
-    }
-
-    labelForInitialSession(labeledPoints, pointsToLabel){
-        
-        var tokens = this.props.tokens
-
-        const hasYesAndNo = this.state.hasYes && this.state.hasNo
-
-        if (hasYesAndNo){
-            this.setState({
-                hasYesAndNo: true,
-                initialLabelingSession: false,
-                labeledPoints: [],
-                pointsToLabel: []
-            }, ()=> {
-                explorationSendLabeledPoint({
-                    data: labeledPoints,
-                }, tokens, this.onNewPointsToLabel.bind(this))
-            })
-
-            return 
-        }
-
-        if  (pointsToLabel.length === 0){
-
-            if (this.state.hasYes && this.state.hasNo ){
-                
-                this.setState({
-                    hasYesAndNo: true,
-                    initialLabelingSession: false,
-                    labeledPoints: []
-                }, ()=> {
-                    explorationSendLabeledPoint({
-                        data: labeledPoints,
-                    }, tokens, this.onNewPointsToLabel.bind(this))
-                })
-            }
-            else{
-
-                this.setState({
-                    labeledPoints: []
-                }, () => {
-                    explorationSendLabeledPoint({
-                        data: labeledPoints,
-                    }, tokens, this.onNewPointsToLabel.bind(this))
-                })                            
-            }
-        }
-    }
-
-    onLabelWholeDatasetClick(e){
-
-        e.preventDefault()
-        
-        getWholedatasetLabeled()
-
-        wholeDatasetLabelizationWasAsked(this.props.tokens)
-    }
-
-
-    dataWasReceived(data){
-        
-        this.setState({
-            showModelVisualisation: true,
-            visualizationData: data
-        })
-    }
-
-    onNewPointsToLabel(points){
-        
-        var pointsToLabel = this.state.pointsToLabel.map(e=>e)
-
-        var receivedPoints = points.map(e => {
-            return {
-                id: e.id,
-                data: e.data.array
-            }
-        })
-
-        for (var point of receivedPoints){
-            pointsToLabel.push(point)
-        }
-
-        this.setState({
-            pointsToLabel: pointsToLabel
-        })       
-    }
-
-    onPositiveLabel(e){
-        
-        var dataIndex = e.target.dataset.key
-        this.dataWasLabeled(dataIndex, 1)
-    }
-
-    onNegativeLabel(e){
-        var dataIndex = e.target.dataset.key
-        this.dataWasLabeled(dataIndex, 0)                      
-    }
-
-    projectionDataWasReceived(boundaryData){
-        
-        let history = this.state.projectionHistory
-        history.push(JSON.parse(boundaryData))
-        
-        this.setState({
-            isFetchingProjection: false,
-            projectionHistory: history
-        })        
-    }   
+    wholeDatasetLabelizationWasAsked(this.props.tokens);
+  }
 }
 
 Exploration.defaultProps = {
-    useRealData: true
-}
+  useRealData: true,
+};
 
-export default Exploration
+export default Exploration;

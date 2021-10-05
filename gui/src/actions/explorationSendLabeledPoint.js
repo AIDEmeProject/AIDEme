@@ -19,47 +19,39 @@
  */
 
 import $ from "jquery";
-import {backend, webplatformApi} from '../constants/constants'
+import { backend, webplatformApi } from "../constants/constants";
 
+function explorationSendLabeledPoint(data, tokens, onSuccess) {
+  const formattedLabeledPoints = data.labeledPoints.map((e) => ({
+    id: e.id,
+    label: e.label,
+  }));
 
-function explorationSendLabeledPoint(data, tokens, onSuccess){
-    
-    var labeledPoints = data.data.map(e => {
-        return {
-            id: e.id,
-            label: e.label,
-            data: {
-                array: e.data
-            }
-        }
-    })
-    
-    var endPoint = backend + "/data-point-were-labeled"
+  $.ajax({
+    type: "POST",
+    dataType: "JSON",
+    url: backend + "/data-point-were-labeled",
+    xhrFields: {
+      withCredentials: true,
+    },
+    data: {
+      labeledPoints: JSON.stringify(formattedLabeledPoints),
+    },
 
-    $.ajax({
-        type: "POST",
-        dataType: 'JSON',
-        url: endPoint,
-        data: {
-            labeledPoints: JSON.stringify(labeledPoints)
-        },
-        
-        success: onSuccess
-    })
-    
-    var updateLabelData = webplatformApi + "/session/" + tokens.sessionToken + "/new-label"
-    
-    $.ajax({
-        type: "PUT", 
-        dataType: "JSON",
-        url: updateLabelData,
-        headers: {
-            Authorization: "Token " + tokens.authorizationToken
-        },
-        data: {
-            number_of_labeled_points: data.data.length
-        }
-    })
+    success: onSuccess,
+  });
+
+  $.ajax({
+    type: "PUT",
+    dataType: "JSON",
+    url: webplatformApi + "/session/" + tokens.sessionToken + "/new-label",
+    headers: {
+      Authorization: "Token " + tokens.authorizationToken,
+    },
+    data: {
+      number_of_labeled_points: data.labeledPoints.length,
+    },
+  });
 }
 
-export default explorationSendLabeledPoint
+export default explorationSendLabeledPoint;

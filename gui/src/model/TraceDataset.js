@@ -18,51 +18,43 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import * as d3 from 'd3'
+import * as d3 from "d3";
 
-import Dataset from './Dataset'
+import Dataset from "./Dataset";
 
-class TraceDataset extends Dataset{
+class TraceDataset extends Dataset {
+  static buildFromLoadedInput(fileContent, isCSV) {
+    var csv = isCSV ? d3.csvParse(fileContent) : d3.tsvParse(fileContent);
+    var dataset = new TraceDataset(csv);
 
-    constructor(d3dataset){
-        super(d3dataset)
-    }
+    dataset.parse_trace();
+    return dataset;
+  }
 
-    static buildFromLoadedInput(fileContent, isCSV){
-        
-        var csv = isCSV ? d3.csvParse(fileContent) : d3.tsvParse(fileContent)
-        var dataset = new TraceDataset(csv)
+  parse_initial_sampling() {}
 
-        dataset.parse_trace()
-        return dataset
-    }
+  get_point(id) {
+    return {
+      id: this.point_indices[id],
+      label: this.labels[id],
+    };
+  }
 
-    parse_initial_sampling(){
+  parse_trace() {
+    this.labels = this.get_raw_col_by_name("labels").flatMap((s) => {
+      //var cleanedStr = e.replace("0.", "0").replace("1.", "1").replace(' ', ',')
+      var cleanedStr = s;
+      return JSON.parse(cleanedStr);
+      //return parseFloat(e.replace(/[\[\]']/g,'' ))
+    });
 
-    }
-
-    get_point(id){
-        return {
-            id: this.point_indices[id],
-            label: this.labels[id]
-        }
-    }
-
-    parse_trace(){
-        
-        this.labels = this.get_raw_col_by_name('labels').flatMap(s => {
-            //var cleanedStr = e.replace("0.", "0").replace("1.", "1").replace(' ', ',')
-            var cleanedStr = s
-            return JSON.parse(cleanedStr)
-            //return parseFloat(e.replace(/[\[\]']/g,'' ))                
-        })
-        
-
-        this.point_indices = this.get_raw_col_by_name('labeled_indexes').flatMap(e => {
-            return JSON.parse(e)
-            //return parseFloat(e.replace(/[\[\]']/g,'' ))
-        })        
-    }
+    this.point_indices = this.get_raw_col_by_name("labeled_indexes").flatMap(
+      (e) => {
+        return JSON.parse(e);
+        //return parseFloat(e.replace(/[\[\]']/g,'' ))
+      }
+    );
+  }
 }
 
-export default TraceDataset
+export default TraceDataset;

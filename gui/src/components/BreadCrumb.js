@@ -18,30 +18,25 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
+import React, { Component } from "react";
 
-class BreadCrumb extends Component{
-
-  render(){
-
-        return (
-                                  
-            <ol className="breadcrumb">
-                
-                {
-                    this.props.items.map((item, i) => {
-
-                        const className = item.active ? "breadcrumb-item active": "breadcrumb-item"
-                        return (
-                            <li key={i} className={className} aria-current="page">{item.name}</li>
-                        )
-                    })
-                }                        
-            </ol>
-                    
-        )
-    }
+class BreadCrumb extends Component {
+  render() {
+    return (
+      <ol className="breadcrumb bg-primary">
+        {this.props.items.map((item, i) => {
+          const className = item.active
+            ? "breadcrumb-item active"
+            : "breadcrumb-item";
+          return (
+            <li key={i} className={className} aria-current="page">
+              {item.name}
+            </li>
+          );
+        })}
+      </ol>
+    );
+  }
 }
 
-
-export default BreadCrumb
+export default BreadCrumb;

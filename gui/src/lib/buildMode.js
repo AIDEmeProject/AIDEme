@@ -18,21 +18,14 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
-
-
-class GridOrDatasetOption extends Component{
-
-    render(){
-        return (
-            <div>
-               <select onChange={this.onFakePointOrRealChange}>
-                    <option>Fake point</option>
-                    <option>Real dataset</option>
-                </select>
-            </div>
-        )
-    }
+function isGroupCategorical(group, columnTypes) {
+  return group.map((variableId) => columnTypes[variableId]).every(Boolean);
 }
 
-export default GridOrDatasetOption
+function buildMode(groups, columnTypes) {
+  return groups.map((group) =>
+    isGroupCategorical(group, columnTypes) ? "categorical" : "persist"
+  );
+}
+
+export default buildMode;

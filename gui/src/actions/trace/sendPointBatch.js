@@ -18,23 +18,21 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import {backend, webplatformApi, defaultConfiguration} from '../../constants/constants'
+import { backend } from "../../constants/constants";
 
 import $ from "jquery";
 
-function sendPointBatch(labeledPoints, onSuccess){
+function sendPointBatch(labeledPoints, onSuccess) {
+  $.ajax({
+    type: "POST",
+    dataType: "JSON",
+    url: backend + "/get-next-traces",
+    data: {
+      labeledPoints: JSON.stringify(labeledPoints),
+    },
 
-    var url = backend + "/get-next-traces"
-    $.ajax({
-
-        type: "POST",
-        dataType: 'JSON',
-        url: url,
-        data: {
-            "labeledPoints": JSON.stringify(labeledPoints),            
-        },
-        success: onSuccess
-    })
+    success: onSuccess,
+  });
 }
 
-export default sendPointBatch
+export default sendPointBatch;

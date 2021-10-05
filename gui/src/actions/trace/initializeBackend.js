@@ -18,33 +18,25 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import {backend, webplatformApi, defaultConfiguration} from '../../constants/constants'
+import { backend } from "../../constants/constants";
 
 import $ from "jquery";
 
-function initializeBackend(traceOptions, onSuccess){
+function initializeBackend(traceOptions, onSuccess) {
+  const { configuration, columnIds, encodedDatasetName } = traceOptions;
 
-    var url = backend + "/start-trace"
+  $.ajax({
+    type: "POST",
+    dataType: "JSON",
+    url: backend + "/start-trace",
+    data: {
+      configuration: JSON.stringify(configuration),
+      columnIds: JSON.stringify(columnIds),
+      encodedDatasetName,
+    },
 
-    var configuration = traceOptions.configuration
-
-    configuration.columns = traceOptions.columnNames
-
-    $.ajax({
-
-        type: "POST",
-        dataType: 'JSON',
-        url: url,
-        data: {
-            'algorithm': traceOptions.algorithm,
-            "configuration": JSON.stringify(traceOptions.configuration),
-            'columnIds': JSON.stringify(traceOptions.columnIds),                            
-            'encodedDatasetName': traceOptions.encodedDatasetName
-        },
-        success: onSuccess
-    })
+    success: onSuccess,
+  });
 }
 
-
-export default initializeBackend
-
+export default initializeBackend;

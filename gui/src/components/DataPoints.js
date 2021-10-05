@@ -18,112 +18,78 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
-import Dataset from '../model/Dataset'
+import React, { Component } from "react";
 
+import Dataset from "../model/Dataset";
+import LabeledPointsCount from "./exploration/LabeledPointsCount";
 
-class DataPoints extends Component{
+class DataPoints extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      labelId: null,
+    };
+  }
 
-    constructor(props){
-        super(props)
-        this.state = {
-            labelId: null
-        }
+  render() {
+    if (!this.props.show) {
+      return <div></div>;
     }
-  
-    render(){
 
-            if ( ! this.props.show){
-                return (<div></div>)
-            }
+    const dataset = this.props.dataset;
 
-            const dataset = this.props.dataset
-        
-            return (
+    return (
+      <div className="row">
+        <div className="col col-lg-12">
+          <hr />
+          <h3>Labeled points</h3>
 
-                <div className="row">
-                    <div className="col col-lg-12">
+          <LabeledPointsCount points={this.props.points} />
 
-                    
-                    <hr />
-                    <h3>
-                        Labeled Points
-                    </h3>
-                
-                    <table className={this.props.normal ? "table": "table-label"}>
-                        <thead>                        
-                            <tr>                    
-                                <th>
-                                    Row id
-                                </th>
+          <table className={this.props.normal ? "table" : "table-label"}>
+            <thead>
+              <tr>
+                <th>Row id</th>
 
-                                {
-                                    this.props.chosenColumns.map((column, key) => {
-                                        
-                                        return (
-                                            <th key={key} >
-                                                {column.name} 
-                                            </th>
-                                        )
-                                    })
-                                }
+                {this.props.chosenColumns.map((column, key) => {
+                  return <th key={key}>{column.name}</th>;
+                })}
 
-                                <th>
-                                    Label 
-                                </th>                                                    
-                            </tr>
-                        </thead>
+                <th>Label</th>
+              </tr>
+            </thead>
 
-                        <tbody>
-                        
-                        {
-                            this.props.points.map((point, key) => {
-                                
-                                const data = dataset.get_selected_columns_point(point.id)
-                                
-                                
-                                return (
+            <tbody>
+              {this.props.points.map((point, key) => {
+                const data = dataset.get_selected_columns_point(point.id);
 
-                                    <tr key={key}>
+                return (
+                  <tr key={key}>
+                    <td>{point.id}</td>
 
-                                        <td >
-                                                {point.id}
-                                        </td>
-                            
-                                        {
+                    {data.map((value, valueKey) => {
+                      return (
+                        <td
+                          key={valueKey}
+                          data-toggle="tooltip"
+                          data-placement="top"
+                          title={value}
+                        >
+                          {Dataset.displayValue(value)}
+                        </td>
+                      );
+                    })}
 
-                                            data.map((value, valueKey) => {
-
-
-                                                return (
-                                                    
-                                                    <td 
-                                                        key={valueKey}
-                                                        data-toggle="tooltip"
-                                                        data-placement="top" 
-                                                        title={value}
-                                                        key={valueKey}
-                                                    >
-                                                        {Dataset.displayValue(value)}
-                                                    </td>
-                                                )
-                                            })
-                                        }
-
-                                        <td>
-                                            { point.label }
-                                        </td>
-                                    </tr>
-                                )
-                            })                    
-                        }
-                    </tbody>
-                
-                </table>
-                </div>
-            </div>
-        )     
-    }            
+                    <td>{point.label}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 }
 
-export default DataPoints
+export default DataPoints;

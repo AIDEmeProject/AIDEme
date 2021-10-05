@@ -18,42 +18,27 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
+import React, { Component } from "react";
 
-class GroupedPointTableHead extends Component{
-    
-    render(){
-        return (
-            
-            <thead>
-                <tr>
-                    
-                    {
-                        
-                        this.props.groups.map((g, i) => {
-                            
-                            const columnNames = g.map(v => v.name)
+class GroupedPointTableHead extends Component {
+  render() {
+    return (
+      <thead>
+        <tr>
+          {this.props.groups.map((g, i) => {
+            const columnNames = g.map((v) => v.name);
 
-                            return (
-                                <th 
-                                    key ={i}
-                                    colSpan={g.length}
-                                    
-                                >
-                                    {columnNames.join(", ")}
-                                </th>
-                            )
-                        })
-                    }
-                    <th
-                        className="label-col"
-                    >
-                        Label    
-                    </th>                
-                </tr>
-            </thead>
-        )
-    }
+            return (
+              <th key={i} colSpan={g.length}>
+                {columnNames.join(",  ")}
+              </th>
+            );
+          })}
+          <th className="label-col">Label</th>
+        </tr>
+      </thead>
+    );
+  }
 }
 
-export default GroupedPointTableHead
+export default GroupedPointTableHead;

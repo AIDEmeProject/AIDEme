@@ -18,389 +18,297 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
+import React, { Component } from "react";
 
-import actions from '../../actions/sendChosenColumns'
+import {
+  SIMPLE_MARGIN,
+  simpleMarginConfiguration,
+  versionSpaceConfiguration,
+  factorizedDualSpaceConfiguration,
+  factorizedVersionSpaceConfiguration,
+  subsampling,
+} from "../../constants/constants";
 
-import GroupVariables from './GroupVariables'
-import AdvancedOptions from './AdvancedOptions'
+import sendConfiguration from "../../actions/sendConfiguration";
 
-import DataExploration from '../visualisation/DataExploration'
+import AttributeSelection from "./AttributeSelection";
+import GroupVariables from "./GroupVariables";
+import AdvancedOptions from "./AdvancedOptions";
 
+class SessionOptions extends Component {
+  constructor(props) {
+    super(props);
 
-class SessionOptions extends Component{
-    
-    render(){
+    var datasetInfos = this.props.datasetInfos;
 
-        const datasetInfos = this.props.datasetInfos
-        const columns = datasetInfos.columns               
+    var chosenColumns = datasetInfos.columns.map((name, idx) => ({
+      name,
+      idx,
+      isUsed: false,
+      type: datasetInfos.types[idx],
+    }));
 
-        return (
-            <div>        
-                <ul className="nav nav-tabs bg-primary">
-                    <li className="nav-item">
-                        <a 
-                           className={ this.state.showColumns ? "nav-link active": "nav-link"}
-                           onClick={this.onBasicOptionClick.bind(this)}
-                        >
-                            Attribute selection
-                        </a>                    
-                    </li>
-                    <li>
-                        <a 
-                            className="nav-link"                        
-                            onClick={this.onSessionStartClick.bind(this)}
-                        >        
-                                Start session
-                        </a>
-                    </li>
+    this.state = {
+      showColumns: true,
+      showVariableGroups: false,
+      showAdvancedOptions: false,
 
-                    <li className="nav-item">
-                        <a 
-                           className={this.state.showVariableGroups ? "nav-link active" : "nav-link" }                           
-                           onClick={this.onVariableGrouping.bind(this)}
-                        >
-                            Factorization structure
-                        </a>
-                    </li>
+      firstVariable: 0,
+      secondVariable: 1,
+      columnTypes: datasetInfos.types,
 
-                    <li className="nav-item">
-                        <a 
-                            className={this.state.showAdvancedOptions ? "nav-link active" : "nav-link"}
-                            onClick={this.onAdvancedOptionClick.bind(this)}
-                        >
-                            Algorithm selection
-                        </a>
-                    </li>                    
-                </ul>
+      checkboxes: datasetInfos.columns.map((c) => false),
+      chosenColumns: chosenColumns,
 
-                <form                 
-                    id="choose-columns"  
-                    className="card"                  
-                >                        
-                    <div                         
-                         style={{ "display": this.state.showColumns ? "initial": "none"}}
-                    >
+      groups: [[]],
 
-                        <div className="row">
-                            <div className="col col-lg-12">
-                                <p>
-                                    Explore the dataset and pick the variables for the labeling phase
-                                </p>
-                            </div>
-                        </div>
+      learner: SIMPLE_MARGIN,
+    };
+  }
 
-                        <div className="row">
-                            <div className="col col-lg-3"  id="column-picker">
-                               
-                                <h3>
-                                    Column name
-                                </h3>
+  render() {
+    return (
+      <div>
+        <ul className="nav nav-tabs bg-primary">
+          <li className="nav-item">
+            <a
+              className={
+                this.state.showColumns ? "nav-link active" : "nav-link"
+              }
+              href="javascript:void(0)"
+              onClick={this.onBasicOptionClick.bind(this)}
+            >
+              Attribute selection
+            </a>
+          </li>
 
-                            {                
-                                columns.map((column, key) => (
-                                        
-                                    <div key={key} className="">
+          <li className="nav-item">
+            <a
+              className={
+                this.state.showVariableGroups ? "nav-link active" : "nav-link"
+              }
+              href="javascript:void(0)"
+              onClick={this.onVariableGrouping.bind(this)}
+            >
+              Factorization structure
+            </a>
+          </li>
 
-                                        <div className="form-check form-check-inline">
-                                                                            
-                                            <input        
-                                                id={"column-" + column }  
-                                                name={"column" + key }
-                                                type="checkbox"
-                                                value={key}
-                                                className="form-check-input"                                                                                             
-                                                onClick={this.onCheckedColumn.bind(this)}
-                                                defaultChecked={this.state.checkboxes[key]}
-                                            /> 
-                                            
-                                            <label
-                                                className="column-name-label"
-                                                htmlFor={"column-" + column}>
-                                                {column || "Not available"}
-                                            </label>
-                                            
-                                            { false && 
-                                            <button
-                                                className="btn btn-primary btn-raised btn-explore"
-                                                role="button"
-                                                type="button"
-                                                data-key={key}
-                                                onClick={this.onExploreClick.bind(this)}>
-                                                Explore
-                                            </button>
-                                            }
-                                        </div>
+          <li className="nav-item">
+            <a
+              className={
+                this.state.showAdvancedOptions ? "nav-link active" : "nav-link"
+              }
+              href="javascript:void(0)"
+              onClick={this.onAdvancedOptionClick.bind(this)}
+            >
+              Algorithm selection
+            </a>
+          </li>
 
-                                    </div>                                                    
-                                    ))
-                                }
-                        </div>
-                                    
-                        <div className="col col-lg-9">
-                                                                                           
-                            <DataExploration                                 
-                                dataset={this.props.dataset}
-                                firstVariable={this.state.firstVariable}
-                                secondVariable={this.state.secondVariable}
-                                show={this.state.showExploration}
-                                chosenColumns={this.state.chosenColumns}
-                            />
-                                                                                                                      
-                        </div>
-                        </div>
-                    </div>
-                                            
-                    <AdvancedOptions {...this.state} />
-                    
-                    <GroupVariables                
-                        show={this.state.showVariableGroups}         
-                        chosenColumns={this.state.chosenColumns}                        
-                        groupWasAdded={this.groupWasAdded.bind(this)}                        
-                        groupsWereValidated={this.groupsWereValidated.bind(this)}   
-                        
-                        availableVariables={this.props.chosenColumns}
-                        points={this.sampledPoints()}
-                                                
-                        dataset={this.props.dataset}
-                    />
+          <li>
+            <a
+              className="nav-link"
+              onClick={this.onSessionStartClick.bind(this)}
+            >
+              Start session
+            </a>
+          </li>
+        </ul>
 
-                    <input 
-                        id="conf" 
-                        name="configuration"
-                        type="text"
-                        style={{visibility: "hidden"}}
-                    />
-                           
-                </form>
-            </div>
-        )
+        <form id="choose-columns" className="card">
+          {this.state.showColumns && (
+            <AttributeSelection
+              columns={this.props.datasetInfos.columns}
+              checkboxes={this.state.checkboxes}
+              dataset={this.props.dataset}
+              firstVariable={this.state.firstVariable}
+              secondVariable={this.state.secondVariable}
+              chosenColumns={this.state.chosenColumns}
+              onCheckedColumn={this.onCheckedColumn.bind(this)}
+            />
+          )}
+
+          {this.state.showVariableGroups && (
+            <GroupVariables
+              chosenColumns={this.state.chosenColumns}
+              groups={this.state.groups}
+              addGroup={this.addGroup.bind(this)}
+              onVariableAddedToGroup={this.onVariableAddedToGroup.bind(this)}
+              onVariableRemovedFromGroup={this.onVariableRemovedFromGroup.bind(
+                this
+              )}
+            />
+          )}
+
+          {this.state.showAdvancedOptions && (
+            <AdvancedOptions
+              learner={this.state.learner}
+              learnerChanged={this.learnerChanged.bind(this)}
+            />
+          )}
+        </form>
+      </div>
+    );
+  }
+
+  componentDidMount() {
+    window.$("form").bootstrapMaterialDesign();
+    window.$("select").select();
+  }
+
+  onVariableGrouping() {
+    this.setState({
+      showAdvancedOptions: false,
+      showColumns: false,
+      showVariableGroups: true,
+    });
+  }
+
+  onBasicOptionClick() {
+    this.setState({
+      showAdvancedOptions: false,
+      showColumns: true,
+      showVariableGroups: false,
+    });
+  }
+
+  onAdvancedOptionClick() {
+    this.setState({
+      showAdvancedOptions: true,
+      showColumns: false,
+      showVariableGroups: false,
+    });
+  }
+
+  onCheckedColumn(e) {
+    var newCheckboxes = [...this.state.checkboxes];
+    newCheckboxes[e.target.value] = e.target.checked;
+
+    var newChosenColumns = [...this.state.chosenColumns];
+    newChosenColumns[e.target.value].isUsed = e.target.checked;
+
+    this.setState({
+      checkboxes: newCheckboxes,
+      chosenColumns: newChosenColumns,
+    });
+  }
+
+  learnerChanged(newLearner) {
+    this.setState({ learner: newLearner });
+  }
+
+  addGroup() {
+    this.setState({
+      groups: [...this.state.groups, []],
+    });
+  }
+
+  onVariableAddedToGroup(groupId, variableId) {
+    const variable = this.state.chosenColumns[variableId];
+    const newVariable = {
+      ...variable,
+      ...{ realId: variableId, id: variableId },
+    };
+
+    var newGroups = [...this.state.groups];
+
+    var modifiedGroup = newGroups[groupId];
+    if (!this.isVariableInGroup(modifiedGroup, newVariable)) {
+      modifiedGroup.push(variable);
+    }
+    newGroups[groupId] = modifiedGroup;
+
+    this.setState({
+      groups: newGroups,
+    });
+  }
+
+  isVariableInGroup(group, variable) {
+    const names = group.map((e) => e.name);
+    return names.includes(variable.name);
+  }
+
+  onVariableRemovedFromGroup(groupId, variableId) {
+    var newGroups = [...this.state.groups];
+
+    newGroups[groupId] = newGroups[groupId].filter(
+      (variable) => variable.idx !== variableId
+    );
+
+    this.setState({
+      groups: newGroups,
+    });
+  }
+
+  onSessionStartClick(e) {
+    const chosenColumns = this.state.chosenColumns.filter((col) => col.isUsed);
+
+    if (chosenColumns.length === 0) {
+      alert("Please select attributes.");
+      return;
     }
 
-    constructor(props){
+    const columnsInGroups = this.state.groups.flat(); // columns may be repeated
+    const useFactorization = columnsInGroups.length > 0;
 
-        super(props)
+    var configuration;
+    var columns;
+    var groups;
+    if (useFactorization) {
+      columns = columnsInGroups;
+      configuration = this.buildFactorizationConfiguration();
 
-        var datasetInfos = this.props.datasetInfos
-        
-        const columnTypes = datasetInfos.uniqueValueNumbers.map((e, i) => {
-            
-            var nRow = this.props.dataset.getLength()
-            
-            var uniqueValues = datasetInfos.uniqueValueNumbers[i]
-            var hasFloats = datasetInfos.hasFloats[i]
-            var hasMoreThanXPercentOfUniqueValues = uniqueValues > 0.2 * nRow
-            
-            var hasMaxOverNRow = datasetInfos.maximums[i] > nRow
-
-            var shouldBeNumeric = hasFloats || hasMoreThanXPercentOfUniqueValues || hasMaxOverNRow
-        
-            return shouldBeNumeric ? "numerical" : "categorical"
-            
-        })
-
-        
-        
-        var chosenColumns = datasetInfos.columns.map( (col, idx) => {
-            return {
-                'name': col,
-                'idx': idx,
-                'isUsed': false,
-                'type': columnTypes[idx]
-            }
-        })            
-
-        this.state = {
-            firstVariable: 0,
-            secondVariable: 1,
-            columnTypes: chosenColumns.map(e => e['type']),
-            checkboxes: datasetInfos.columns.map (c => false),
-            chosenColumns: chosenColumns,
-            showAdvancedOptions: false,
-            showVariableGroups: false,
-            availableVariables: [],            
-            variableGroups: [
-                [],
-                []
-            ],  
-            finalVariables: [],            
-
-            learner: "Uncertainty sampling",
-            classifier: "SVM",
-            showColumns: true,
-            showExploration: false
-        }
+      var newGroups = this.state.groups.filter((group) => group.length > 0);
+      this.computeVariableColumnIndices(newGroups);
+      groups = newGroups;
+    } else {
+      columns = chosenColumns;
+      configuration = this.buildNonFactorizationConfiguration();
+      groups = null;
     }
 
-    sampledPoints(){
-        return [
-            {
-                'id': 243
-            },
-            {
-                'id': 666
-            }
-        ]
-    }
+    sendConfiguration(columns, configuration, this.props.sessionWasStarted);
 
-    componentDidMount(){
+    this.props.sessionOptionsWereChosen(columns, groups, configuration);
+  }
 
-        window.$('form').bootstrapMaterialDesign()     
-        window.$('select').select();   
-    }
-    
-    onVariableGrouping(){
+  buildNonFactorizationConfiguration() {
+    const activeLearner =
+      this.state.learner === SIMPLE_MARGIN
+        ? simpleMarginConfiguration
+        : versionSpaceConfiguration;
 
-        this.setState({
-            showAdvancedOptions: false,
-            showColumns: false,
-            showVariableGroups: true
-        })
-    }
+    return { activeLearner, subsampling };
+  }
 
-    onBasicOptionClick(){
-        this.setState({
-            showAdvancedOptions: false,
-            showColumns: true,
-            showVariableGroups: false
-        })
-    }
+  buildFactorizationConfiguration() {
+    const activeLearner =
+      this.state.learner === SIMPLE_MARGIN
+        ? factorizedDualSpaceConfiguration
+        : factorizedVersionSpaceConfiguration;
 
-    onAdvancedOptionClick(){
+    const partition = this.state.groups.map((variables) =>
+      variables.map((v) => v.idx)
+    );
 
-        this.setState({
-            showAdvancedOptions: true,
-            showColumns: false,
-            showVariableGroups: false
-        })
-    }
+    return {
+      activeLearner,
+      subsampling,
+      factorization: { partition },
+    };
+  }
 
-    onExploreClick(e){
-        
-        e.preventDefault()
+  computeVariableColumnIndices(groups) {
+    var i = 0;
 
-        var columnId = e.target.dataset.key
-        
-        this.setState({
-            firstVariable: columnId,
-            showExploration: true
-        })
-        
-        
-        return false
-    }
-
-    onCheckedColumn(e){
-        
-        var idx = e.target.value
-        var checkboxes = this.state.checkboxes.map (e => e)
-        
-
-        var newChosenColumns = this.state.chosenColumns.map(e => e)
-        newChosenColumns[idx].isUsed = e.target.checked      
-        var idx = 0;
-        newChosenColumns.forEach((e, i) => {
-
-            if (e.isUsed){
-                newChosenColumns[i] =  Object.assign({}, e, {
-                    finalIdx: idx
-                })
-                idx++
-            }            
-        })
-
-        checkboxes[idx] = e.target.checked
-
-              
-        this.setState({
-            chosenColumns: newChosenColumns,
-            checkboxes: checkboxes,            
-        })
-    }
-
-    onColumnTypeChange(e){
-
-        var iColumn = e.target.dataset.key
-        
-        var newChosenColumnState = this.state.chosenColumns.map(e => e)
-        newChosenColumnState[iColumn].type = e.target.value
-                
-        this.setState({
-            chosenColumns: newChosenColumnState,            
-        })                
-    }
-    
-    onSessionStartClick(e){
-        
-        e.preventDefault()                       
-        var chosenColumns = this.state.chosenColumns.filter(e => e.isUsed)
-        //const enableTSM = chosenColumns.length == 2                           
-        actions.sendColumns(this.props.tokens, chosenColumns, this.props.sessionWasStarted)        
-        this.props.sessionOptionsWereChosen({            
-            chosenColumns: chosenColumns,                
-        })                            
-    }
-   
-    groupsWereValidated(groups){
-        
-        var chosenColumns = groups.flatMap( g => {
-            return g.map( v => {return v} )
-        })
-        //var chosenColumns = this.state.chosenColumns //.filter(e => e.isUsed)      
-        
-        this.computeVariableColumnIndices(groups)
-
-
-        var datasetMetadata = this.buildDatasetMetadata()
-        
-        this.props.groupsWereValidated(chosenColumns, groups, ()=> {
-            actions.sendVariableGroups(this.props.tokens, chosenColumns, groups, datasetMetadata, this.props.sessionWasStarted)    
-        })                                  
-    }
-
-    buildDatasetMetadata(){
-    
-        var metadata = {
-            'types': this.state.columnTypes.map( e => e == "categorical"),
-            'columnNames': this.state.chosenColumns.map( e => e['name'])
-        }
-        
-        return metadata
-    }
-
-    computeVariableColumnIndices(groups){
-        
-        var i = 0;
-
-        groups.forEach( variables => {
-            
-            variables.forEach(variable => {
-                
-                variable['realId'] = i
-                i++
-            })  
-        })     
-    }
-
-    groupWasAdded(){
-
-        var groups = this.state.variableGroups.map(e => e)
-        groups.push([])
-
-        this.setState({
-            variableGroups: groups
-        })
-
-        this.forceUpdate()
-    }
-       
-    onFakePointClick(e){
-         
-        this.setState({
-            useFakePoint: e.target.checked
-        })
-    }      
+    groups.forEach((variables) => {
+      variables.forEach((variable) => {
+        variable["realId"] = i;
+        i++;
+      });
+    });
+  }
 }
 
-
-export default SessionOptions
+export default SessionOptions;

@@ -19,13 +19,22 @@
  */
 
 import $ from "jquery";
-import {backend, webplatformApi} from '../constants/constants'
 
+import { backend } from "../constants/constants";
 
-function getDecisionBoundaryData(dataWasReceived){
-
-    var url = backend + "/get-decision-boundaries"
-
-    $.get(url, dataWasReceived)
+function sendConfiguration(chosenColumns, configuration, onSuccess) {
+  $.ajax({
+    type: "POST",
+    url: backend + "/choose-options",
+    xhrFields: {
+      withCredentials: true,
+    },
+    data: {
+      configuration: JSON.stringify(configuration),
+      columnIds: JSON.stringify(chosenColumns.map((e) => e.idx)),
+    },
+    success: onSuccess,
+  });
 }
-export default getDecisionBoundaryData
+
+export default sendConfiguration;

@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2019 École Polytechnique
  *
@@ -19,40 +18,36 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-class PointsAsTable extends Component{
+import React, { Component } from "react";
 
-    render(){
-        return (
-            <table>
-                    <thead>
-                            <tr>
-                                {
-                                    this.props.columns.map((col, k) => {
-                                    
-                                        return (
-                                            <th key={k}>
-                                                { col }
-                                            </th>
-                                        )
-                                    })
-                                }
-                            </tr>
-                        </thead>
-                    <tbody>
-                        {
-                            this.props.rows.map((row, k) => {
-                                return (
+class LearnerOptions extends Component {
+  render() {
+    return (
+      <div className="form-group">
+        <label htmlFor="algorithm-selection">Learner</label>
+        <select
+          className="form-control"
+          id="algorithm-selection"
+          name="active-learner"
+          onChange={this.onLearnerChange.bind(this)}
+        >
+          {this.props.learners.map((learner, idx) => (
+            <option
+              key={`learner-${idx}`}
+              value={learner.value}
+              selected={learner.value === this.props.selected}
+            >
+              {learner.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
 
-                                    <tr>
-                                        <td>
-                                            {row}
-                                        </td>
-                                    </tr>
-                                )
-                            })
-                        }
-                    </tbody>
-            </table>
-        )
-    }
+  onLearnerChange(e) {
+    this.props.learnerChanged(e.target.value);
+  }
 }
+
+export default LearnerOptions;

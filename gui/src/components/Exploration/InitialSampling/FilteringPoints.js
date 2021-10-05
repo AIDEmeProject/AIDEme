@@ -18,311 +18,200 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
-import sendFilters from '../../../actions/sendFilters';
-import PointLabelisation from '../../PointLabelisation';
+import React, { Component } from "react";
 
-import * as  d3 from "d3"
+import * as d3 from "d3";
 
-import robot from '../../../resources/robot.png'
+import PointLabelisation from "../../PointLabelisation";
 
-class NumericalFilter extends Component{
+import robot from "../../../resources/robot.png";
 
-    render(){
+class NumericalFilter extends Component {
+  constructor(props) {
+    super(props);
 
-        const variable = this.props.variable        
-        const values = this.props.dataset.get_column_name(variable.name)        
-        const extend = d3.extent(values)
+    const valuesInColumn = this.props.dataset.get_column_name(
+      this.props.filter.columnName
+    );
+    const [min, max] = d3.extent(valuesInColumn);
 
-        const min = extend[0],
-              max = extend[1]
-        
-        return (
-            <div className="card filter inline-block">
+    this.state = {
+      min,
+      max,
+      step: (max - min) / 100,
+      minValue: this.props.filter.min ? this.props.filter.min : min,
+      maxValue: this.props.filter.max ? this.props.filter.max : max,
+    };
+  }
 
-                    <p>
-                        {variable.name} <br />
-                        range: [{this.state.minValue}, {this.state.maxValue}]
-                    </p>
-                    <label>
-                        Min                        
-                        <input 
-                            value={this.state.minValue}
-                            onChange={this.minChanged.bind(this)}
-                            type="range"
-                            min={min}
-                            max={max}
-                        />
-                    </label>
+  render() {
+    return (
+      <div className="card filter inline-block">
+        <p>
+          {this.props.filter.columnName} <br />
+          range: [{this.state.minValue}, {this.state.maxValue}]
+        </p>
+        <label>
+          Min
+          <input
+            value={this.state.minValue}
+            onChange={this.minChanged.bind(this)}
+            type="range"
+            min={this.state.min}
+            max={this.state.max}
+            step={this.state.step}
+          />
+        </label>
 
-                    <br />
-                    
-                    <label>
-                        Max: {this.state.max}                
-                        <input 
-                            value={this.state.maxValue}
-                            onChange={this.maxChanged.bind(this)}
-                            type="range"
-                            min={min}
-                            max={max}
-                        />
-                    </label>
-            </div>
-        )        
+        <br />
+
+        <label>
+          Max
+          <input
+            value={this.state.maxValue}
+            onChange={this.maxChanged.bind(this)}
+            type="range"
+            min={this.state.min}
+            max={this.state.max}
+            step={this.state.step}
+          />
+        </label>
+      </div>
+    );
+  }
+
+  minChanged(e) {
+    var newValue = parseFloat(e.target.value);
+    if (newValue >= this.state.maxValue) {
+      newValue = this.state.maxValue;
     }
 
-    constructor(props){
-        super(props)
-        const variable = this.props.variable
-        const values = this.props.dataset.get_column_name(variable.name)        
-        const extend = d3.extent(values)
+    this.setState({
+      minValue: newValue,
+    });
 
-        const min = extend[0],
-              max = extend[1]
-        
-        
+    this.props.onFilterChanged(this.props.iFilter, { min: newValue });
+  }
 
-        this.state = {
-            
-            minValue: min,
-            maxValue: max
-        }
+  maxChanged(e) {
+    var newValue = parseFloat(e.target.value);
+    if (newValue <= this.state.minValue) {
+      newValue = this.state.minValue;
     }
 
-    minChanged(e){
-        var newValue = parseFloat(e.target.value)
-        
-        if (newValue >= this.state.maxValue){
-            newValue = this.state.maxValue
-        }
-        this.setState({
-            minValue:newValue
-        })
+    this.setState({ maxValue: newValue });
 
-        const iFilter = this.props.iFilter
-        this.props.filterChanged(iFilter, {min: newValue})
-    }
-
-    maxChanged(e){
-        var newValue = parseFloat(e.target.value)
-        if (newValue <= this.state.minValue){
-            newValue = this.state.minValue
-        }
-        
-        this.setState({maxValue: newValue})
-
-        const iFilter = this.props.iFilter
-        this.props.filterChanged(iFilter, {max: newValue})
-    }
+    this.props.onFilterChanged(this.props.iFilter, { max: newValue });
+  }
 }
 
-class CategoricalFilter extends Component{
+class CategoricalFilter extends Component {
+  constructor(props) {
+    super(props);
 
-    render(){
+    var uniqueValues = Object.entries(
+      this.props.dataset.uniqueValues(this.props.filter.columnName)
+    ).map((e) => e[0]);
 
-        return (
-            <div className="card filter categorical-filter inline-block">
+    this.state = {
+      uniqueValues,
+      filterValues: this.props.filter.filterValues
+        ? this.props.filter.filterValues
+        : [],
+    };
+  }
 
-                <p>{this.props.variable.name}</p>
-                {
-                    this.props.variable.values.map((value, i) => {
-
-                        return (
-                            <div>
-                                <label htmlFor={"cat-filter-" + i}>
-                                    {value}
-                                </label>
-                                <input 
-                                    type="checkbox"
-                                    data-value={value} 
-                                    onChange={this.categoryWasClicked.bind(this)}    
-                                />
-                            </div>
-                        )
-                    })
-                }
-            </div>
-        )
-    }
-
-    constructor(props){
-        super(props)
-        this.state = {
-            filterValues: []
-        }
-    }
-
-    categoryWasClicked(e){
-
-        const iFilter = this.props.iFilter
-        var isIncluded = e.target.checked
-        var value = e.target.dataset.value
-
-        if (isIncluded){
-            var filterValues = this.state.filterValues
-            filterValues.push(value)
-        }
-        else{
-            var filterValues = this.state.filterValues.filter( e => e !== value)
-        }
-        
-        this.setState({
-            filterValues: filterValues
-        }, () => {
-            this.props.filterChanged(iFilter, {filterValues: filterValues})
-        })
-        
-    }
-}
-
-class PointFiltering extends Component{
-
-    render(){
-        return (
+  render() {
+    return (
+      <div className="card filter categorical-filter inline-block">
+        <p>{this.props.filter.columnName}</p>
+        {this.state.uniqueValues.map((value, i) => {
+          return (
             <div>
-
-                    <p className="card">
-                        <span className="chatbot-talk">
-                        <img src={robot} width="70" />
-                        <q>
-                            Filter positive points and click on get Points
-                        </q>
-                        </span>
-                    </p>
-
-
-                <p>                
-                    <button
-                        className="btn btn-raised"
-                        onClick={this.getPoints.bind(this)}
-                    >
-                        Get Points
-                    </button>
-                </p>
-
-                {
-                    this.props.chosenVariables.map( (variable, i) => {
-
-                        var Filter = variable.type === "numerical" ? NumericalFilter: CategoricalFilter
-                        return (
-                            
-                            <Filter          
-                                iFilter={i}   
-                                filterChanged={this.filterChanged.bind(this)}
-                                key={i}
-                                variable={variable}   
-                                dataset={this.props.dataset}                             
-                            />                            
-                        )
-                    })
-                }
-
-                <p>                
-                    <button
-                        className="btn btn-raised"
-                        onClick={this.getPoints.bind(this)}
-                    >
-                        Get Points
-                    </button>
-                </p>
-
-                { 
-                    this.state.points.length > 0 && 
-                    <div>
-
-                        <PointLabelisation
-                            chosenColumns={this.props.chosenVariables}
-                            dataset={this.props.dataset}
-                            pointsToLabel={this.state.points}
-                            onPositiveLabel={this.onPositiveLabel.bind(this)}
-                            onNegativeLabel={this.onNegativeLabel.bind(this)}
-                        />
-                    </div>
-                }
+              <label htmlFor={"cat-filter-" + i}>{value}</label>
+              <input
+                type="checkbox"
+                data-value={value}
+                onChange={this.categoryWasClicked.bind(this)}
+              />
             </div>
-        )
-    }
+          );
+        })}
+      </div>
+    );
+  }
 
-    constructor(props){
+  categoryWasClicked(e) {
+    var value = e.target.dataset.value;
 
-        super(props)
-        this.state = {
-            filters: this.props.chosenVariables.map( e => { 
-                return {
-                    'columnName': e.name,                
-                }
-            }),
-            points: []
-        }        
-    }
+    var parsedValue = parseFloat(value);
+    if (!isNaN(parsedValue)) value = parsedValue;
 
-    onPositiveLabel(e){
-        var iPoint = e.target.dataset.key
+    const newFilterValues = e.target.checked
+      ? [...this.state.filterValues, value]
+      : this.state.filterValues.filter((e) => e !== value);
 
-        var points = this.state.points
-        points.splice(iPoint, 1)
-        this.setState({
-            points
-        })
-
-        this.props.onPositiveLabel(e)
-    }
-
-    onNegativeLabel(e){
-
-        var iPoint = e.target.dataset.key
-
-        var points = this.state.points
-        points.splice(iPoint, 1)
-        this.setState({
-            points
-        })
-        this.props.onNegativeLabel(e)
-    }
-
-    filterChanged(iFilter, change){
-        var filter = this.getFilter(iFilter)
-        
-        filter = Object.assign(filter, change)
-        
-        var filters = this.updateFilter(iFilter, filter)
-        
-        this.setState({
-            filters: filters
-        })
-    }
-
-    updateFilter(iFilter, filter){
-        var filters = this.state.filters.map(e => e)
-        filters[iFilter] = filter
-        return filters
-    }
-
-    getFilter(iFilter){
-        return this.state.filters[iFilter]
-    }
-
-    getPoints(){
-        
-        const filters = this.state.filters
-        
-        sendFilters(filters, this.pointsReceived.bind(this))
-    }
-
-    pointsReceived(points){
-
-        var receivedPoints = points.map(e => {
-            return {
-                id: e.id,
-                data: e.data.array
-            }
-        }).filter((e, i) => { return i < 25})
-        this.setState({
-            points: receivedPoints
-        })
-    }
-
+    this.setState(
+      {
+        filterValues: newFilterValues,
+      },
+      () => {
+        this.props.onFilterChanged(this.props.iFilter, {
+          filterValues: newFilterValues,
+        });
+      }
+    );
+  }
 }
 
+class FilteringPoints extends Component {
+  render() {
+    return (
+      <div>
+        <p className="card">
+          <span className="chatbot-talk">
+            <img src={robot} width="50" alt="robot" />
+            <q>Filter positive points and click on Get points.</q>
+          </span>
+        </p>
 
-export default PointFiltering
+        {this.props.filters.map((filter, i) => {
+          const Filter =
+            filter.type === "numerical" ? NumericalFilter : CategoricalFilter;
+          return (
+            <Filter
+              iFilter={i}
+              key={i}
+              filter={filter}
+              dataset={this.props.dataset}
+              onFilterChanged={this.props.onFilterChanged}
+            />
+          );
+        })}
+
+        <p>
+          <button
+            className="btn btn-primary btn-raised"
+            onClick={this.props.getFilteredPoints}
+          >
+            Get Points
+          </button>
+        </p>
+
+        {this.props.pointsToLabel.length > 0 && (
+          <div>
+            <PointLabelisation
+              chosenColumns={this.props.chosenColumns}
+              dataset={this.props.dataset}
+              pointsToLabel={this.props.pointsToLabel}
+              onPositiveLabel={this.props.onPositiveLabel}
+              onNegativeLabel={this.props.onNegativeLabel}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+}
+
+export default FilteringPoints;

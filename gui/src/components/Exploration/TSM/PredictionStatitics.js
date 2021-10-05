@@ -18,47 +18,30 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
+import React, { Component } from "react";
 
-class PredictionStatistics extends Component{
-  
-    render(){         
-    
-        return (
+class PredictionStatistics extends Component {
+  render() {
+    return (
+      <div id="prediction-stats">
+        <h5>Classifier statistics</h5>
 
-            <div id="prediction-stats">
-                
-                <h5>Classifier statistics</h5>
-                
-                <table className="table">                
-                    <tbody>
-                        <tr>
-                            <td>
-                            Positive  
-                            </td>
-                            <td>
-                                {this.props.stats.positive}
-                            </td>                        
-                        </tr>
+        <table className="table">
+          <tbody>
+            <tr>
+              <td>Positive</td>
+              <td>{this.props.stats.positive}</td>
+            </tr>
 
-                        <tr>
-                            <td>
-                            Negative  
-                            </td>
-                            <td>
-                                {this.props.stats.negative}
-                            </td>                        
-                        </tr>                       
-                    </tbody>
-                </table>
-            </div>
-        )
-    }
-
-    constructor(props){
-        super(props)        
-    }
-
+            <tr>
+              <td>Negative</td>
+              <td>{this.props.stats.negative}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 }
 
-export default PredictionStatistics
+export default PredictionStatistics;

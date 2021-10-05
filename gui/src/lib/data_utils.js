@@ -18,21 +18,10 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-function loadFileFromInputFile(inputId, onFileLoaded){
-
-
-    if (document.getElementById(inputId).files.length == 0 ){
-        alert('Please select a trace file ')
-        return
-    }
-
-    var fileReader = new FileReader()
-    const file = document.getElementById(inputId)
-    fileReader.onload = onFileLoaded
-    fileReader.readAsText(file.files[0])
-
-
-
+function loadFileFromInputFile(inputId, onFileLoaded) {
+  var fileReader = new FileReader();
+  fileReader.onload = onFileLoaded;
+  fileReader.readAsText(document.getElementById(inputId).files[0]);
 }
 
-export default loadFileFromInputFile
+export default loadFileFromInputFile;

@@ -18,329 +18,149 @@
  * Upon convergence, the model is run through the entire data source to retrieve all relevant records.
  */
 
-import React, { Component } from 'react';
+import React, { Component } from "react";
 
-import MicroModalComponent from '../MicroModalComponent'
-import Group from './Group'
+import MicroModalComponent from "./MicroModalComponent";
+import Group from "./Group";
 
-import DataPoints from '../DataPoints'
+import robot from "../../resources/robot.png";
 
-import robot from '../../resources/robot.png'
-
-function containsObject(obj, list) {
-
-    var i;
-    for (i = 0; i < list.length; i++) {
-        if (list[i] === obj) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-function variableIsUsed(variable, usedVariables){
-    return containsObject(variable, usedVariables)
-}
-
-class GroupEditor extends Component{
-
-    constructor(props){
-
-        super(props)      
-        this.state = {
-            includedVariables: []
-        }
-    }
-
-    render(){
-        const availableVariables = this.props.availableVariables
-        const chosenColumns = this.props.chosenColumns
-        
-        return (
-            <div>
-                                
-                {
-                    chosenColumns.map((variable, i) => {
-                
-                        return (
-                            <div
-                                key={i} 
-                                className="form-inline in-line"
-                            >
-                                <label
-                                    htmlFor={"column-group-" + i}
-                                >
-                                    {variable.name}                                    
-                                </label>                                
-                                <input
-                                    id={"column-group-" + i}
-                                    type="checkbox"
-                                    className="form-control"                                                                                                                            
-                                    data-variableid={variable.idx}  
-                                    data-variableorder={i}
-                                    onChange={this.onVariableAddedClick.bind(this)}
-                                />
-                            </div>
-                        )
-                    })
-                }                
+class GroupEditor extends Component {
+  render() {
+    const variablesInGroup = this.props.group.map((variable) => variable.idx);
+    return (
+      <div>
+        {this.props.chosenColumns.map((variable, i) => {
+          return (
+            <div key={i} className="form-inline in-line">
+              <label htmlFor={"column-group-" + i}>{variable.name}</label>
+              <input
+                id={"column-group-" + i}
+                type="checkbox"
+                className="form-control"
+                data-variableid={variable.idx}
+                checked={variablesInGroup.includes(variable.idx)}
+                onChange={this.onVariableClick.bind(this)}
+              />
             </div>
-        )
-    }
+          );
+        })}
+      </div>
+    );
+  }
 
-    onVariableAddedClick(e){
-        
-        const dataset = e.target.dataset
-        const iVariable = parseInt(dataset.variableid)
-        
-        const iGroup = this.props.iGroup
-        const isChecked = e.target.checked
-        
-        
-        if (isChecked){
-            this.props.onVariableAddedToGroup(iGroup, iVariable)
-        }
-        //else{
-        //    this.props.onVariableRemovedFromGroup(iGroup, iVariable)
-        //}        
+  onVariableClick(e) {
+    const iVariable = parseInt(e.target.dataset.variableid);
+
+    if (e.target.checked) {
+      this.props.onVariableAddedToGroup(this.props.iGroup, iVariable);
+    } else {
+      this.props.onVariableRemovedFromGroup(this.props.iGroup, iVariable);
     }
+  }
 }
 
+class GroupVariables extends Component {
+  constructor(props) {
+    super(props);
 
-class GroupVariables extends Component {
-                
-    render(){
+    this.state = {
+      editedGroupId: null,
+    };
+  }
 
-        var availableVariables = this.state.variablesNotAlreadyInAGivenGroup
-        
-        if ( ! this.props.show){
-            return (<div></div>)
-        }
-        return (
+  render() {
+    return (
+      <div>
+        <h4>Variable subgroups</h4>
 
-            <div>                
+        <p className="card">
+          <span className="chatbot-talk">
+            <img src={robot} width="50" alt="robot" />
+            <q>
+              By grouping variables in formal subgroups, the convergence speed
+              can be improved. Group variables by click on "Edit" on a given
+              group.
+            </q>
+          </span>
+        </p>
 
-                <h4>
-                    Variable subgroups
-                </h4>
-                
-                <p className="card">   
+        <div>
+          <button
+            role="button"
+            type="button"
+            className="btn btn-primary btn-raised"
+            onClick={this.props.addGroup}
+          >
+            Add group
+          </button>
+        </div>
 
-                    <span className="chatbot-talk">
-                        <img src={robot} width="70" />
-                        <q>
-                            By grouping variable in formal subgroups, the convergence speed can be improved. 
-                            Group variable by click on "edit" on a given group
-                        </q>
-                    </span>
+        <div>
+          {this.props.groups.map((group, iGroup) => {
+            return (
+              <div key={iGroup} className="card group">
+                <p>
+                  Group {iGroup + 1}
+                  <button
+                    type="button"
+                    role="button"
+                    data-group={iGroup}
+                    className="btn btn-primary"
+                    onClick={this.onGroupEdit.bind(this)}
+                  >
+                    Edit
+                  </button>
                 </p>
-                
-                
-                <div>
-                
-                    <button
-                        role="button"
-                        type="button"
-                        className ="btn btn-primary btn-raised"
-                        onClick={this.addVariableGroup.bind(this)}
-                    >
-                        Add group
-                    </button>
 
-                    <button 
-                        type="button"
-                        role="button"
-                        className ="btn btn-primary btn-raised"
-                        onClick={this.validateGroups.bind(this)}
-                    >
-                        Validate groups
-                    </button>
-                </div>
+                <Group
+                  group={group}
+                  iGroup={iGroup}
+                  onVariableRemovedFromGroup={
+                    this.props.onVariableRemovedFromGroup
+                  }
+                />
+              </div>
+            );
+          })}
+        </div>
 
-                <div>
-                {
-                    this.state.groups.map((group, iGroup)=> {
+        {this.state.editedGroupId !== null && (
+          <MicroModalComponent
+            title={
+              "Edition of group " + String(Number(this.state.editedGroupId) + 1)
+            }
+            onClose={this.closeGroupEditor.bind(this)}
+          >
+            <GroupEditor
+              group={this.props.groups[this.state.editedGroupId]}
+              iGroup={this.state.editedGroupId}
+              chosenColumns={this.props.chosenColumns.filter((e) => e.isUsed)}
+              onVariableAddedToGroup={this.props.onVariableAddedToGroup}
+              onVariableRemovedFromGroup={this.props.onVariableRemovedFromGroup}
+            />
+          </MicroModalComponent>
+        )}
+      </div>
+    );
+  }
 
-                        return (
-                            <div                            
-                                key={iGroup}
-                                className="card group"                                
-                            >
-                            <p>
-                                Group {iGroup} 
-                                <button
-                                    type="button"
-                                    role="button"
-                                    data-group={iGroup}
-                                    className="btn btn-primary" 
-                                    onClick={this.onGroupEdit.bind(this)}
-                                >Edit</button>
-                            </p>
-                                                                                      
-                            <Group 
-                                group={group} 
-                                iGroup={iGroup}
-                                chosenColumns={this.props.chosenColumns}
-                                availableVariables={availableVariables}
-                                onVariableAddedToGroup={this.onVariableAddedToGroup.bind(this)}
-                                onVariableRemovedFromGroup={this.onVariableRemovedFromGroup.bind(this)}
-                            />
-                            </div>
-                        )
-                    })
-                }
+  componentDidUpdate() {
+    window.$("input").bootstrapMaterialDesign();
+  }
 
-                </div>
+  onGroupEdit(e) {
+    const groupId = e.target.dataset.group;
 
-                {
-                    this.state.editedGroupId !== null && 
+    this.setState({
+      editedGroupId: groupId,
+    });
+  }
 
-
-                    <MicroModalComponent
-                        title={"Edition of group " + this.state.editedGroupId}
-                        onClose={this.closeFactorizationGroupEdition.bind(this)}
-                    >
-                        
-                        <GroupEditor 
-                            group={this.state.groups[this.state.editedGroupId]}
-                            iGroup={this.state.editedGroupId}
-                            chosenColumns={this.props.chosenColumns.filter(e => e.isUsed)}
-                            availableVariables={availableVariables}
-                            onVariableAddedToGroup={this.onVariableAddedToGroup.bind(this)}
-                            onVariableRemovedFromGroup={this.onVariableRemovedFromGroup.bind(this)}
-                        />
-
-                    </MicroModalComponent>
-                }
-
-            </div>
-        )
-    }
-
-    constructor(props){
-
-        super(props)        
-        
-        this.state = {
-            groups: [
-                [],                
-            ],   
-            editedGroupId: null,                     
-            variablesNotAlreadyInAGivenGroup: this.props.chosenColumns.map(e => e)
-        }
-    }
-
-    componentDidUpdate(){
-        window.$('input').bootstrapMaterialDesign()    
-    }
-
-    closeFactorizationGroupEdition(e){
-        e.preventDefault()
-        this.setState({editedGroupId: null})
-    }
-
-    onGroupEdit(e){
-
-        const groupId = e.target.dataset.group
-
-        this.setState({
-            editedGroupId: groupId
-        })
-    }
-
-    componentWillReceiveProps(nextProps){        
-        //merge stuff
-        this.setState({
-            variablesNotAlreadyInAGivenGroup: nextProps.chosenColumns.filter(e => e.isUsed)
-        }, this.forceUpdate)
-    }
-
-
-    isVariableInGroup(group, variable){
-        const names = group.map(e => e.name)
-
-        return names.includes(variable.name)
-    }
-
-    onVariableAddedToGroup(groupId, variableId){
-        
-        var variable = this.props.chosenColumns[variableId]
-        
-        var newGroupsState = this.state.groups.map(e => e)
-
-        var modifiedGroup = newGroupsState[groupId]
-        
-        variable['realId'] = variableId
-        variable['id'] = variableId
-
-        if ( ! this.isVariableInGroup(modifiedGroup, variable)){
-
-            modifiedGroup.push(variable)
-        }
-                    
-        newGroupsState[groupId] = modifiedGroup
-                                
-        var variablesNotAlreadyInAGivenGroup = this.state.variablesNotAlreadyInAGivenGroup.filter(v => {
-            
-            return v.idx !== variable.idx
-        })
-    
-        this.setState({
-            groups: newGroupsState,
-            variablesNotAlreadyInAGivenGroup: variablesNotAlreadyInAGivenGroup
-        })
-    }
-    
-    onVariableRemovedFromGroup(groupId, removedColumnId){
-        
-        var variable = this.props.chosenColumns[removedColumnId]
-        var newGroupsState = this.state.groups.map(e => e)
-        var modifiedGroup = newGroupsState[groupId]
-
-        
-        /*
-        modifiedGroup = modifiedGroup.filter((variable, i) => {
-            
-            return i !== removedColumnId
-        })
-        */
-        modifiedGroup.splice(removedColumnId, 1)
-        
-
-        var variablesNotAlreadyInAGivenGroup = this.state.variablesNotAlreadyInAGivenGroup.map(e => e)
-        variablesNotAlreadyInAGivenGroup.push(variable)
-        newGroupsState[groupId] = modifiedGroup
-        this.setState({
-            groups: newGroupsState,
-            variablesNotAlreadyInAGivenGroup: variablesNotAlreadyInAGivenGroup
-        })
-    }
-
-    addVariableGroup(){
-
-        var groups = this.state.groups.map(e=>e)
-
-        groups.push([])
-        this.setState({
-            groups: groups
-        })
-    }
-
-    validateGroups(){
-
-
-        const nVariableInGroups = this.state.groups.reduce((a, acc) => {
-            return a.length + acc
-        })
-
-        if (nVariableInGroups == 0){
-            alert('please put at least variable in a group')
-        }
-        
-        this.props.groupsWereValidated(this.state.groups)
-    }
+  closeGroupEditor(e) {
+    e.preventDefault();
+    this.setState({ editedGroupId: null });
+  }
 }
 
-
-export default GroupVariables
+export default GroupVariables;
