@@ -9,6 +9,8 @@ AIDEme explores properties of the user labeling process and the class distributi
 which come with provable results on model accuracy and approximation, and have evaluation results showing much improved convergence over 
 existing AL methods while maintaining interactive speed.
 
+This software is released under the BSD-3 license.
+
 ## Instructions
 To start our demo, you simply have to follow the two main steps below:
 
