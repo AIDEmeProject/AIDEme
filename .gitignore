@@ -1,4 +1,9 @@
+# Mac files
 .DS_Store
 
-# redis
+# Redis
 dump.rdb
+
+# IDE
+.idea/
+.vscode/
