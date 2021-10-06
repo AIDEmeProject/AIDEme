@@ -105,7 +105,7 @@ def test_compute_mode():
         },
         {
             "partition": [[0, 2], [1]],
-            "types": [np.object, np.object, np.float64],
+            "types": [object, object, np.float64],
             "expected_output": ["persist", "categorical"],
         },
     ]
