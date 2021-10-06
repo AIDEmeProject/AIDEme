@@ -1,36 +1,32 @@
-# AIDEMe Frontend
+# AIDEme Frontend
 
-The frontend is built with react.js a frontend library
-developped by facebook and allowing to build composable
-components. 
+This folder implements the frontend of our AIDEme data exploration system demo.
+The frontend is built with react.js.
 
 Each part of the interface is represented by a component
 
-in order to start the developpement server just run
+## Instructions
 
-$ npm start
+To start AIDEme's frontend, simply open a terminal at the `gui` folder and run the following commands: 
 
-A schema of the architecture is displayed below
+```shell
+npm install  # install dependencies 
+npm start  # start development server
+```
 
+Note that you only need to install dependencies once.
 
 ## Folder structure
+The frontend code is structured as follows: 
 
-**actions** folder contains functions to call the backend (currently java)
+- **actions**: folder contains functions to call the backend (currently java)
 
-**components** folder contains react components
+- **components**: folder contains react components
 
-**constants** folder contains algorithm configuration
+- **constants**: folder contains algorithm configuration
 
-**model** folder contains some classes containing logic (manipulating dataset)
+- **model**: folder contains some classes containing logic (manipulating dataset)
 
-**lib** folder contains some utilitaties functions
+- **lib**: folder contains some utility functions
 
-**ressources** image and other ressources
-
-## Implementing a backend
-
-If you want to implement a backend for this front you have
-to implement the following Web api
-
-
-
+- **resources**: image and other resources

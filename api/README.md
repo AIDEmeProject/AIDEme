@@ -1,4 +1,4 @@
-# Backend Server
+# AIDEme Backend
 
 In this module, we implement the backend server for the AIDEme data exploration demo. 
 The server functionality was done in Python using the Flask library.
