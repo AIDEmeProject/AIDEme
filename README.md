@@ -29,7 +29,7 @@ dependencies installed.
 
 ### Manual start
 
-To manually start our demo, you need have to follow the two steps below:
+To manually start our demo, you need to follow the two steps below:
 
 - Start the **backend** server found in the `api` folder, whose instructions can be found in the [api/README.md](api/README.md) file.
 
