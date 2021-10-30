@@ -1,4 +1,4 @@
-aideme @ git+https://github.com/AIDEmeProject/AIDEme.git
+aideme @ git+https://github.com/AIDEmeProject/PythonMiddleware.git
 click==8.0.1
 Flask==2.0.2
 Flask-Cors==3.0.10
